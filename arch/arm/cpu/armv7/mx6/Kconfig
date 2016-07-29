@@ -214,6 +214,6 @@ source "board/tqc/tqma6/Kconfig"
 source "board/udoo/Kconfig"
 source "board/wandboard/Kconfig"
 source "board/warp/Kconfig"
-source "board/zero-gravitas/Kconfig"
+source "board/reMarkable/zero-gravitas/Kconfig"
 
 endif
