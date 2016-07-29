@@ -178,6 +178,10 @@ config TARGET_XPRESS
 	select DM_THERMAL
 	select SUPPORT_SPL
 
+config TARGET_ZERO_GRAVITAS
+	bool "reMarkable Prototype 1"
+	select SUPPORT_SPL
+
 endchoice
 
 config SYS_SOC
@@ -210,5 +214,6 @@ source "board/tqc/tqma6/Kconfig"
 source "board/udoo/Kconfig"
 source "board/wandboard/Kconfig"
 source "board/warp/Kconfig"
+source "board/zero-gravitas/Kconfig"
 
 endif
