@@ -1,12 +1,12 @@
-if TARGET_MX6SLEVK
+if TARGET_ZERO-GRAVITAS
 
 config SYS_BOARD
-	default "mx6slevk"
+	default "zero-gravitas"
 
 config SYS_VENDOR
-	default "freescale"
+	default "reMarkable"
 
 config SYS_CONFIG_NAME
-	default "mx6slevk"
+	default "zero-gravitas"
 
 endif

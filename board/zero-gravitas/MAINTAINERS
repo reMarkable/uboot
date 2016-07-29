@@ -1,9 +1,6 @@
 MX6SLEVK BOARD
-M:	Fabio Estevam <fabio.estevam@nxp.com>
-M:	Peng Fan <peng.fan@nxp.com>
+M:	Martin Sandsmark <martin.sandsmark@remarkable.no>
 S:	Maintained
-F:	board/freescale/mx6slevk/
-F:	include/configs/mx6slevk.h
-F:	configs/mx6slevk_defconfig
-F:	configs/mx6slevk_spl_defconfig
-F:	configs/mx6slevk_spinor_defconfig
+F:	board/zero-gravitas/
+F:	include/configs/zero-gravitas.h
+F:	configs/zero-gravitas_defconfig

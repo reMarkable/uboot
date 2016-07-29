@@ -3,4 +3,4 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-obj-y  := mx6slevk.o
+obj-y  := zero-gravitas.o
