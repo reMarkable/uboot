@@ -1,4 +1,4 @@
-if TARGET_ZERO-GRAVITAS
+if TARGET_ZERO_GRAVITAS
 
 config SYS_BOARD
 	default "zero-gravitas"
