@@ -3,4 +3,4 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-obj-y  := zero-gravitas.o
+obj-y  := zero-gravitas.o ../../freescale/common/pfuze.o
