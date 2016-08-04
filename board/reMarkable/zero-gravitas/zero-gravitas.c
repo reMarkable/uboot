@@ -411,22 +411,33 @@ int checkboard(void)
 #include <spl.h>
 #include <libfdt.h>
 
-const struct mx6sl_iomux_ddr_regs mx6_ddr_ioregs = {
-	.dram_sdqs0 = 0x00003030,
-	.dram_sdqs1 = 0x00003030,
-	.dram_sdqs2 = 0x00003030,
-	.dram_sdqs3 = 0x00003030,
-	.dram_dqm0 = 0x00000030,
-	.dram_dqm1 = 0x00000030,
-	.dram_dqm2 = 0x00000030,
-	.dram_dqm3 = 0x00000030,
-	.dram_cas  = 0x00000030,
-	.dram_ras  = 0x00000030,
-	.dram_sdclk_0 = 0x00000028,
-	.dram_reset = 0x00000030,
-	.dram_sdba2 = 0x00000000,
-	.dram_odt0 = 0x00000008,
-	.dram_odt1 = 0x00000008,
+const struct mx6dq_iomux_ddr_regs mx6_ddr_ioregs = {
+	.dram_sdclk_0 =  0x00020030,
+	.dram_sdclk_1 =  0x00020030,
+	.dram_cas =  0x00020030,
+	.dram_ras =  0x00020030,
+	.dram_reset =  0x00020030,
+	.dram_sdcke0 =  0x00003000,
+	.dram_sdcke1 =  0x00003000,
+	.dram_sdba2 =  0x00000000,
+	.dram_sdodt0 =  0x00003030,
+	.dram_sdodt1 =  0x00003030,
+	.dram_sdqs0 =  0x00000030,
+	.dram_sdqs1 =  0x00000030,
+	.dram_sdqs2 =  0x00000030,
+	.dram_sdqs3 =  0x00000030,
+	.dram_sdqs4 =  0x00000030,
+	.dram_sdqs5 =  0x00000030,
+	.dram_sdqs6 =  0x00000030,
+	.dram_sdqs7 =  0x00000030,
+	.dram_dqm0 =  0x00020030,
+	.dram_dqm1 =  0x00020030,
+	.dram_dqm2 =  0x00020030,
+	.dram_dqm3 =  0x00020030,
+	.dram_dqm4 =  0x00020030,
+	.dram_dqm5 =  0x00020030,
+	.dram_dqm6 =  0x00020030,
+	.dram_dqm7 =  0x00020030,
 };
 
 const struct mx6sl_iomux_grp_regs mx6_grp_ioregs = {
@@ -450,17 +461,18 @@ const struct mx6_mmdc_calibration mx6_mmcd_calib = {
 	.mpzqlp2ctl = 0x1b4700c7,
 };
 
-static struct mx6_lpddr2_cfg mem_ddr = {
-	.mem_speed = 800,
-	.density = 4,
-	.width = 32,
+/* MT41K128M16JT-125 */
+static struct mx6_ddr3_cfg mem_ddr = {
+	.mem_speed = 1600,
+	.density = 2,
+	.width = 16,
 	.banks = 8,
 	.rowaddr = 14,
 	.coladdr = 10,
-	.trcd_lp = 2000,
-	.trppb_lp = 2000,
-	.trpab_lp = 2250,
-	.trasmin = 4200,
+	.pagesz = 2,
+	.trcd = 1375,
+	.trcmin = 4875,
+	.trasmin = 3500,
 };
 
 static void ccgr_init(void)
@@ -481,19 +493,22 @@ static void ccgr_init(void)
 static void spl_dram_init(void)
 {
 	struct mx6_ddr_sysinfo sysinfo = {
-		.dsize = mem_ddr.width / 32,
-		.cs_density = 20,
-		.ncs = 2,
+		/* width of data bus:0=16,1=32,2=64 */
+		.dsize = 2,
+		/* config for full 4GB range so that get_mem_size() works */
+		.cs_density = 32, /* 32Gb per CS */
+		/* single chip select */
+		.ncs = 1,
 		.cs1_mirror = 0,
-		.walat = 0,
-		.ralat = 2,
-		.mif3_mode = 3,
-		.bi_on = 1,
-		.rtt_wr = 0,        /* LPDDR2 does not need rtt_wr rtt_nom */
-		.rtt_nom = 0,
-		.sde_to_rst = 0,    /* LPDDR2 does not need this field */
-		.rst_to_cke = 0x10, /* JEDEC value for LPDDR2: 200us */
-		.ddr_type = DDR_TYPE_LPDDR2,
+		.rtt_wr = 1 /*DDR3_RTT_60_OHM*/,	/* RTT_Wr = RZQ/4 */
+		.rtt_nom = 1 /*DDR3_RTT_60_OHM*/,	/* RTT_Nom = RZQ/4 */
+		.walat = 1,	/* Write additional latency */
+		.ralat = 5,	/* Read additional latency */
+		.mif3_mode = 3,	/* Command prediction working mode */
+		.bi_on = 1,	/* Bank interleaving enabled */
+		.sde_to_rst = 0x10,	/* 14 cycles, 200us (JEDEC default) */
+		.rst_to_cke = 0x23,	/* 33 cycles, 500us (JEDEC default) */
+		.ddr_type = DDR_TYPE_DDR3,
 	};
 	mx6sl_dram_iocfg(32, &mx6_ddr_ioregs, &mx6_grp_ioregs);
 	mx6_dram_cfg(&sysinfo, &mx6_mmcd_calib, &mem_ddr);
