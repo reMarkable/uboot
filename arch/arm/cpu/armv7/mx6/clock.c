@@ -112,7 +112,6 @@ void enable_enet_clk(unsigned char enable)
 }
 #endif
 
-#ifdef CONFIG_MXC_UART
 void enable_uart_clk(unsigned char enable)
 {
 	u32 mask;
@@ -127,7 +126,6 @@ void enable_uart_clk(unsigned char enable)
 	else
 		clrbits_le32(&imx_ccm->CCGR5, mask);
 }
-#endif
 
 #ifdef CONFIG_MMC
 int enable_usdhc_clk(unsigned char enable, unsigned bus_num)

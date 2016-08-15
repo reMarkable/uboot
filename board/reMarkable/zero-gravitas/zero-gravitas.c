@@ -373,6 +373,7 @@ int board_ehci_hcd_init(int port)
 
 int board_early_init_f(void)
 {
+	enable_uart_clk(1);
 	setup_iomux_uart();
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
