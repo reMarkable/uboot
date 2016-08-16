@@ -61,9 +61,9 @@
 	"fdt_addr=0x88000000\0" \
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
-	"mmcdev=1\0" \
+	"mmcdev=0\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk1p2 rootwait rw\0" \
+	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=${mmcroot}\0" \
 	"loadbootscript=" \
@@ -103,7 +103,8 @@
 				"bootz ${loadaddr} - ${fdt_addr}; " \
 			"else " \
 				"if test ${boot_fdt} = try; then " \
-					"bootz ${loadaddr} - ${fdt_addr}; " \
+					"setenv bootargs console=${console},${baudrate} rdinit=/linuxrc; " \
+					"bootz ${loadaddr} 0x89000000 ${fdt_addr}; " \
 				"else " \
 					"echo WARN: Cannot load the DT; " \
 				"fi; " \

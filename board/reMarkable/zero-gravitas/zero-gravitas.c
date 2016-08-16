@@ -44,9 +44,6 @@ DECLARE_GLOBAL_DATA_PTR;
 	PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED   |             \
 	PAD_CTL_DSE_40ohm   | PAD_CTL_HYS)
 
-#define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED | \
-		      PAD_CTL_DSE_40ohm | PAD_CTL_SRE_FAST)
-
 #define I2C_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |		\
 		      PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
 		      PAD_CTL_DSE_40ohm | PAD_CTL_HYS |		\
@@ -72,17 +69,13 @@ static iomux_v3_cfg_t const uart1_pads[] = {
 };
 
 static iomux_v3_cfg_t const usdhc1_pads[] = {
-	/* 8 bit SD */
+	/* 4 bit SD */
 	MX6_PAD_SD1_CLK__USDHC1_CLK | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD1_CMD__USDHC1_CMD | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD1_DAT0__USDHC1_DAT0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD1_DAT1__USDHC1_DAT1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD1_DAT2__USDHC1_DAT2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD1_DAT3__USDHC1_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	MX6_PAD_SD1_DAT4__USDHC1_DAT4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	MX6_PAD_SD1_DAT5__USDHC1_DAT5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	MX6_PAD_SD1_DAT6__USDHC1_DAT6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	MX6_PAD_SD1_DAT7__USDHC1_DAT7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 
 	/*CD pin*/
 	MX6_PAD_KEY_ROW7__GPIO_4_7 | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -95,6 +88,10 @@ static iomux_v3_cfg_t const usdhc2_pads[] = {
 	MX6_PAD_SD2_DAT1__USDHC2_DAT1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD2_DAT2__USDHC2_DAT2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD2_DAT3__USDHC2_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT4__USDHC2_DAT4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT5__USDHC2_DAT5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT6__USDHC2_DAT6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT7__USDHC2_DAT7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 
 	/*CD pin*/
 	MX6_PAD_SD2_DAT7__GPIO_5_0 | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -126,25 +123,6 @@ static iomux_v3_cfg_t const fec_pads[] = {
 	MX6_PAD_FEC_TX_CLK__GPIO_4_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-#ifdef CONFIG_MXC_SPI
-static iomux_v3_cfg_t ecspi1_pads[] = {
-	MX6_PAD_ECSPI1_MISO__ECSPI_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_ECSPI1_MOSI__ECSPI_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_ECSPI1_SCLK__ECSPI_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_ECSPI1_SS0__GPIO4_IO11  | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
-int board_spi_cs_gpio(unsigned bus, unsigned cs)
-{
-	return (bus == 0 && cs == 0) ? (IMX_GPIO_NR(4, 11)) : -1;
-}
-
-static void setup_spi(void)
-{
-	imx_iomux_v3_setup_multiple_pads(ecspi1_pads, ARRAY_SIZE(ecspi1_pads));
-}
-#endif
-
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
@@ -160,12 +138,12 @@ static void setup_iomux_fec(void)
 }
 
 #define USDHC1_CD_GPIO	IMX_GPIO_NR(4, 7)
-#define USDHC2_CD_GPIO	IMX_GPIO_NR(5, 0)
-#define USDHC3_CD_GPIO	IMX_GPIO_NR(3, 22)
+/*#define USDHC2_CD_GPIO	IMX_GPIO_NR(5, 0)*/
+/*#define USDHC3_CD_GPIO	IMX_GPIO_NR(3, 22)*/
 
 static struct fsl_esdhc_cfg usdhc_cfg[3] = {
-	{USDHC1_BASE_ADDR},
-	{USDHC2_BASE_ADDR, 0, 4},
+	{USDHC1_BASE_ADDR, 0, 4},
+	{USDHC2_BASE_ADDR, 0, 8},
 	{USDHC3_BASE_ADDR, 0, 4},
 };
 
@@ -184,10 +162,12 @@ int board_mmc_getcd(struct mmc *mmc)
 		ret = !gpio_get_value(USDHC1_CD_GPIO);
 		break;
 	case USDHC2_BASE_ADDR:
-		ret = !gpio_get_value(USDHC2_CD_GPIO);
+		ret = 1;
+		/*ret = !gpio_get_value(USDHC2_CD_GPIO);*/
 		break;
 	case USDHC3_BASE_ADDR:
-		ret = !gpio_get_value(USDHC3_CD_GPIO);
+		ret = 0;
+		/*ret = !gpio_get_value(USDHC3_CD_GPIO);*/
 		break;
 	}
 
@@ -217,13 +197,13 @@ int board_mmc_init(bd_t *bis)
 		case 1:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
-			gpio_direction_input(USDHC2_CD_GPIO);
+			/*gpio_direction_input(USDHC2_CD_GPIO);*/
 			usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
 			break;
 		case 2:
 			imx_iomux_v3_setup_multiple_pads(
 				usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
-			gpio_direction_input(USDHC3_CD_GPIO);
+			/*gpio_direction_input(USDHC3_CD_GPIO);*/
 			usdhc_cfg[2].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
 			break;
 		default:
@@ -261,7 +241,7 @@ int board_mmc_init(bd_t *bis)
 	case 1:
 		imx_iomux_v3_setup_multiple_pads(usdhc2_pads,
 						 ARRAY_SIZE(usdhc2_pads));
-		gpio_direction_input(USDHC2_CD_GPIO);
+		/*gpio_direction_input(USDHC2_CD_GPIO);*/
 		usdhc_cfg[0].esdhc_base = USDHC2_BASE_ADDR;
 		usdhc_cfg[0].max_bus_width = 4;
 		usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
@@ -269,7 +249,7 @@ int board_mmc_init(bd_t *bis)
 	case 2:
 		imx_iomux_v3_setup_multiple_pads(usdhc3_pads,
 						 ARRAY_SIZE(usdhc3_pads));
-		gpio_direction_input(USDHC3_CD_GPIO);
+		/*gpio_direction_input(USDHC3_CD_GPIO);*/
 		usdhc_cfg[0].esdhc_base = USDHC3_BASE_ADDR;
 		usdhc_cfg[0].max_bus_width = 4;
 		usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
