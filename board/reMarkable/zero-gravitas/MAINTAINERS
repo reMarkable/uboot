@@ -1,6 +1,6 @@
-MX6SLEVK BOARD
+ZERO-GRAVITAS BOARD
 M:	Martin Sandsmark <martin.sandsmark@remarkable.no>
 S:	Maintained
-F:	board/zero-gravitas/
+F:	board/reMarkable/zero-gravitas/
 F:	include/configs/zero-gravitas.h
 F:	configs/zero-gravitas_defconfig
