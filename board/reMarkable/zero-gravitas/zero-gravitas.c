@@ -56,6 +56,22 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define ETH_PHY_POWER	IMX_GPIO_NR(4, 21)
 
+/*
+ * For handling the keypad
+ */
+#define KPP_KPCR 0x20B8000
+#define KPP_KPSR 0x20B8002
+#define KPP_KDDR 0x20B8004
+#define KPP_KPDR 0x20B8006
+#define KBD_STAT_KPKD	(0x1 << 0) /* Key Press Interrupt Status bit (w1c) */
+#define KBD_STAT_KPKR	(0x1 << 1) /* Key Release Interrupt Status bit (w1c) */
+#define KBD_STAT_KDSC	(0x1 << 2) /* Key Depress Synch Chain Status bit (w1c)*/
+#define KBD_STAT_KRSS	(0x1 << 3) /* Key Release Synch Status bit (w1c)*/
+#define KBD_STAT_KDIE	(0x1 << 8) /* Key Depress Interrupt Enable Status bit */
+#define KBD_STAT_KRIE	(0x1 << 9) /* Key Release Interrupt Enable */
+#define KBD_STAT_KPPEN	(0x1 << 10) /* Keypad Clock Enable */
+
+
 int dram_init(void)
 {
 	gd->ram_size = get_ram_size((void *)PHYS_SDRAM, PHYS_SDRAM_SIZE);
@@ -116,6 +132,13 @@ static iomux_v3_cfg_t const fec_pads[] = {
 	MX6_PAD_FEC_REF_CLK__FEC_REF_OUT | MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_FEC_RX_ER__GPIO_4_19 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_FEC_TX_CLK__GPIO_4_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+static iomux_v3_cfg_t const key_pads[] = {
+	MX6_PAD_KEY_ROW0__KEY_ROW0 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL0__KEY_COL0 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL1__KEY_COL1 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL2__KEY_COL2 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static void setup_iomux_uart(void)
@@ -356,10 +379,114 @@ int board_early_init_f(void)
 	return 0;
 }
 
+/*
+ * Sets up the keypad and then checks for a magic key combo
+ */
+static int check_keypress(void)
+{
+	unsigned short reg_val;
+	int col;
+
+	/* Array of pressed keys */
+	int pressed[3] = { 0 };
+
+	/* Masks for enabled rows/cols */
+	unsigned short rows_en_mask = 0x1;
+	unsigned short cols_en_mask = 0x7;
+
+	/* Set up pins */
+	imx_iomux_v3_setup_multiple_pads(key_pads, ARRAY_SIZE(key_pads));
+
+	/* Initialize keypad */
+	/*
+	 * Include enabled rows in interrupt generation (KPCR[7:0])
+	 * Configure keypad columns as open-drain (KPCR[15:8])
+	 */
+	reg_val = readw(KPP_KPCR);
+	reg_val |= rows_en_mask & 0xff;		/* rows */
+	reg_val |= (cols_en_mask & 0xff) << 8;	/* cols */
+	writew(reg_val, KPP_KPCR);
+
+	/* Write 0's to KPDR[15:8] (Colums) */
+	reg_val = readw(KPP_KPDR);
+	reg_val &= 0x00ff;
+	writew(reg_val, KPP_KPDR);
+
+	/* Configure columns as output, rows as input (KDDR[15:0]) */
+	writew(0xff00, KPP_KDDR);
+
+	/*
+	 * Clear Key Depress and Key Release status bit.
+	 * Clear both synchronizer chain.
+	 */
+	reg_val = readw(KPP_KPSR);
+	reg_val |= KBD_STAT_KPKR | KBD_STAT_KPKD |
+		   KBD_STAT_KDSC | KBD_STAT_KRSS;
+	writew(reg_val, KPP_KPSR);
+
+	/* Enable KDI and disable KRI (avoid false release events). */
+	reg_val |= KBD_STAT_KDIE;
+	reg_val &= ~KBD_STAT_KRIE;
+	writew(reg_val, KPP_KPSR);
+
+	for (col = 0; col < 3; col++) {
+		/*
+		 * Discharge keypad capacitance:
+		 * 2. write 1s on column data.
+		 * 3. configure columns as totem-pole to discharge capacitance.
+		 * 4. configure columns as open-drain.
+		 */
+		reg_val = readw(KPP_KPDR);
+		reg_val |= 0xff00;
+		writew(reg_val, KPP_KPDR);
+
+		reg_val = readw(KPP_KPCR);
+		reg_val &= ~((cols_en_mask & 0xff) << 8);
+		writew(reg_val, KPP_KPCR);
+
+		udelay(2);
+
+		reg_val = readw(KPP_KPCR);
+		reg_val |= (cols_en_mask & 0xff) << 8;
+		writew(reg_val, KPP_KPCR);
+
+		/*
+		 * 5. Write a single column to 0, others to 1.
+		 * 6. Sample row inputs and save data.
+		 * 7. Repeat steps 2 - 6 for remaining columns.
+		 */
+		reg_val = readw(KPP_KPDR);
+		reg_val &= ~(1 << (8 + col));
+		writew(reg_val, KPP_KPDR);
+
+		reg_val = readw(KPP_KPDR);
+		pressed[col] = (~reg_val) & 1;
+		printf("key: %d, pressed: %d\n", col, pressed[col]);
+	}
+
+	/* Check for magic key sequence */
+	if (pressed[0] == 0 && pressed[1] == 1 && pressed[2] == 0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+/* For jumping to USB serial download mode */
+typedef void hab_rvt_failsafe_t(void);
+#define HAB_RVT_FAILSAFE (*(uint32_t *) 0x000000BC)
+#define hab_rvt_failsafe ((hab_rvt_failsafe_t *) HAB_RVT_FAILSAFE)
+
 int board_init(void)
 {
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
+
+	if (check_keypress()) {
+		printf("Magic key press detected, launching USB download mode\n");
+		hab_rvt_failsafe(); /* This never returns, hopefully */
+	}
+
 
 #ifdef CONFIG_SYS_I2C_MXC
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
