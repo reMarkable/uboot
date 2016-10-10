@@ -1,7 +1,9 @@
 /*
  * Copyright (C) 2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2016 reMarkable AS
  *
  * Author: Fabio Estevam <fabio.estevam@freescale.com>
+ * Author: Martin Sandsmark <martin.sandsmark@remarkable.no>
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -26,7 +28,6 @@
 #include <netdev.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
-#include "../../freescale/common/pfuze.h"
 #include <usb.h>
 #include <usb/ehci-ci.h>
 
@@ -120,20 +121,6 @@ static iomux_v3_cfg_t const usdhc3_pads[] = {
 	MX6_PAD_SD3_DAT3__USDHC3_DAT3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-static iomux_v3_cfg_t const fec_pads[] = {
-	MX6_PAD_FEC_MDC__FEC_MDC | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_MDIO__FEC_MDIO | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_CRS_DV__FEC_RX_DV | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_RXD0__FEC_RX_DATA0 | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_RXD1__FEC_RX_DATA1 | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_TX_EN__FEC_TX_EN | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_TXD0__FEC_TX_DATA0 | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_TXD1__FEC_TX_DATA1 | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_REF_CLK__FEC_REF_OUT | MUX_PAD_CTRL(ENET_PAD_CTRL),
-	MX6_PAD_FEC_RX_ER__GPIO_4_19 | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_FEC_TX_CLK__GPIO_4_21 | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
 static iomux_v3_cfg_t const key_pads[] = {
 	MX6_PAD_KEY_ROW0__KEY_ROW0 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_KEY_COL0__KEY_COL0 | MUX_PAD_CTRL(NO_PAD_CTRL),
@@ -144,15 +131,6 @@ static iomux_v3_cfg_t const key_pads[] = {
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
-}
-
-static void setup_iomux_fec(void)
-{
-	imx_iomux_v3_setup_multiple_pads(fec_pads, ARRAY_SIZE(fec_pads));
-
-	/* Power up LAN8720 PHY */
-	gpio_direction_output(ETH_PHY_POWER , 1);
-	udelay(15000);
 }
 
 #define USDHC1_CD_GPIO	IMX_GPIO_NR(4, 7)
@@ -279,7 +257,6 @@ int board_mmc_init(bd_t *bis)
 #endif
 }
 
-#ifdef CONFIG_SYS_I2C_MXC
 #define PC	MUX_PAD_CTRL(I2C_PAD_CTRL)
 /* I2C1 for PMIC */
 struct i2c_pads_info i2c_pad_info1 = {
@@ -298,33 +275,101 @@ struct i2c_pads_info i2c_pad_info1 = {
 int power_init_board(void)
 {
 	struct pmic *p;
+	unsigned int reg;
+	u32 id;
+	int ret;
+	unsigned char offset, i, switch_num;
 
-	p = pfuze_common_init(I2C_PMIC);
-	if (!p)
-		return -ENODEV;
+	ret = power_pfuze100_init(I2C_PMIC);
+	if (ret)
+		return ret;
 
-	return pfuze_mode_init(p, APS_PFM);
+	p = pmic_get("PFUZE100");
+	ret = pmic_probe(p);
+	if (ret)
+		return ret;
+
+	pmic_reg_read(p, PFUZE100_DEVICEID, &reg);
+	printf("PMIC:  PFUZE100 ID=0x%02x\n", reg);
+
+	/* Set SW1AB stanby volage to 0.975V */
+	pmic_reg_read(p, PFUZE100_SW1ABSTBY, &reg);
+	reg &= ~SW1x_STBY_MASK;
+	reg |= SW1x_0_975V;
+	pmic_reg_write(p, PFUZE100_SW1ABSTBY, reg);
+
+	/* Set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */
+	pmic_reg_read(p, PFUZE100_SW1ABCONF, &reg);
+	reg &= ~SW1xCONF_DVSSPEED_MASK;
+	reg |= SW1xCONF_DVSSPEED_4US;
+	pmic_reg_write(p, PFUZE100_SW1ABCONF, reg);
+
+	/* Set SW1C standby voltage to 0.975V */
+	pmic_reg_read(p, PFUZE100_SW1CSTBY, &reg);
+	reg &= ~SW1x_STBY_MASK;
+	reg |= SW1x_0_975V;
+	pmic_reg_write(p, PFUZE100_SW1CSTBY, reg);
+
+	/* Set SW1C/VDDSOC step ramp up time from 16us to 4us/25mV */
+	pmic_reg_read(p, PFUZE100_SW1CCONF, &reg);
+	reg &= ~SW1xCONF_DVSSPEED_MASK;
+	reg |= SW1xCONF_DVSSPEED_4US;
+	pmic_reg_write(p, PFUZE100_SW1CCONF, reg);
+
+	pmic_reg_read(p, PFUZE100_INTSTAT0, &reg);
+	printf("INSTAT0: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT1, &reg);
+	printf("INSTAT1: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT3, &reg);
+	printf("INSTAT3: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT4, &reg);
+	printf("INSTAT4: %x\n", reg);
+
+	/* Set 3V3_SW4 voltage to 3.3V */
+	pmic_reg_read(p, PFUZE100_SW4VOL, &reg);
+	reg &= ~SW4_VOL_MASK;
+	reg |= SW4_3_300V;
+	pmic_reg_write(p, PFUZE100_SW4VOL, reg);
+
+	/* Set 3V3_VGEN6 voltage to 3.3V */
+	pmic_reg_read(p, PFUZE100_VGEN6VOL, &reg);
+	reg &= ~LDO_VOL_MASK;
+	reg |= LDOB_3_30V;
+	pmic_reg_write(p, PFUZE100_VGEN6VOL, reg);
+
+
+	/* Set modes */
+	pmic_reg_read(p, PFUZE100_DEVICEID, &id);
+	id = id & 0xf;
+
+	if (id == 0) {
+		switch_num = 6;
+		offset = PFUZE100_SW1CMODE;
+	} else if (id == 1) {
+		switch_num = 4;
+		offset = PFUZE100_SW2MODE;
+	} else {
+		printf("Not supported, id=%d\n", id);
+		return -EINVAL;
+	}
+
+	ret = pmic_reg_write(p, PFUZE100_SW1ABMODE, APS_PFM);
+	if (ret < 0) {
+		printf("Set SW1AB mode error!\n");
+		return ret;
+	}
+
+	for (i = 0; i < switch_num - 1; i++) {
+		ret = pmic_reg_write(p, offset + i * SWITCH_SIZE, APS_PFM);
+		if (ret < 0) {
+			printf("Set switch 0x%x mode error!\n",
+			       offset + i * SWITCH_SIZE);
+			return ret;
+		}
+	}
+
+	return ret;
 }
-#endif
-
-#ifdef CONFIG_FEC_MXC
-int board_eth_init(bd_t *bis)
-{
-	setup_iomux_fec();
-
-	return cpu_eth_init(bis);
-}
-
-static int setup_fec(void)
-{
-	struct iomuxc *iomuxc_regs = (struct iomuxc *)IOMUXC_BASE_ADDR;
-
-	/* clear gpr1[14], gpr1[18:17] to select anatop clock */
-	clrsetbits_le32(&iomuxc_regs->gpr[1], IOMUX_GPR1_FEC_MASK, 0);
-
-	return enable_fec_anatop_clock(0, ENET_50MHZ);
-}
-#endif
 
 #ifdef CONFIG_USB_EHCI_MX6
 #define USB_OTHERREGS_OFFSET	0x800
@@ -490,10 +535,6 @@ int board_init(void)
 
 #ifdef CONFIG_SYS_I2C_MXC
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
-#endif
-
-#ifdef	CONFIG_FEC_MXC
-	setup_fec();
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX6

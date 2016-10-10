@@ -91,6 +91,11 @@ enum {
 
 #define PFUZE100_SW1ABC_SETP(x)	((x - 3000) / 250)
 
+/* SW4 Output Voltage Configuration */
+#define SW4_1_800V 56
+#define SW4_3_300V 114
+#define SW4_VOL_MASK 0x3F
+
 /* SW1A/B/C Output Voltage Configuration */
 #define SW1x_0_300V 0
 #define SW1x_0_325V 1
