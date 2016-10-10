@@ -697,6 +697,24 @@ static int do_mmc_boot_resize(cmd_tbl_t *cmdtp, int flag,
 	printf("EMMC RPMB partition Size %d MB\n", rpmbsize);
 	return CMD_RET_SUCCESS;
 }
+
+static int do_mmc_partconf_read(struct mmc *mmc)
+{
+	int err;
+	u8 ack, part_num, access;
+
+	err = mmc_get_part_conf(mmc, &ack, &part_num, &access);
+	if (err)
+		return CMD_RET_FAILURE;
+
+	printf("EXT_CSD[179], PARTITION_CONFIG register:\n"
+		"BOOT_ACK: %d\n"
+		"BOOT_PARTITION_ENABLE: %d\n"
+		"PARTITION_ACCESS: %d\n", ack, part_num, access);
+
+	return CMD_RET_SUCCESS;
+}
+
 static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 			   int argc, char * const argv[])
 {
@@ -704,13 +722,10 @@ static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 	struct mmc *mmc;
 	u8 ack, part_num, access;
 
-	if (argc != 5)
+	if (argc != 2 && argc != 5)
 		return CMD_RET_USAGE;
 
 	dev = simple_strtoul(argv[1], NULL, 10);
-	ack = simple_strtoul(argv[2], NULL, 10);
-	part_num = simple_strtoul(argv[3], NULL, 10);
-	access = simple_strtoul(argv[4], NULL, 10);
 
 	mmc = init_mmc_device(dev, false);
 	if (!mmc)
@@ -721,9 +736,17 @@ static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 		return CMD_RET_FAILURE;
 	}
 
+	if (argc == 2)
+		return do_mmc_partconf_read(mmc);
+
+	ack = simple_strtoul(argv[2], NULL, 10);
+	part_num = simple_strtoul(argv[3], NULL, 10);
+	access = simple_strtoul(argv[4], NULL, 10);
+
 	/* acknowledge to be sent during boot operation */
 	return mmc_set_part_conf(mmc, ack, part_num, access);
 }
+
 static int do_mmc_rst_func(cmd_tbl_t *cmdtp, int flag,
 			   int argc, char * const argv[])
 {
@@ -858,8 +881,8 @@ U_BOOT_CMD(
 	" - Set the BOOT_BUS_WIDTH field of the specified device\n"
 	"mmc bootpart-resize <dev> <boot part size MB> <RPMB part size MB>\n"
 	" - Change sizes of boot and RPMB partitions of specified device\n"
-	"mmc partconf dev boot_ack boot_partition partition_access\n"
-	" - Change the bits of the PARTITION_CONFIG field of the specified device\n"
+	"mmc partconf dev [boot_ack boot_partition partition_access]\n"
+	" - Show or change the bits of the PARTITION_CONFIG field of the specified device\n"
 	"mmc rst-function dev value\n"
 	" - Change the RST_n_FUNCTION field of the specified device\n"
 	"   WARNING: This is a write-once field and 0 / 1 / 2 are the only valid values.\n"

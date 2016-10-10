@@ -1954,6 +1954,37 @@ int mmc_set_part_conf(struct mmc *mmc, u8 ack, u8 part_num, u8 access)
 }
 
 /*
+ * Read EXT_CSD[179] which is PARTITION_CONFIG (formerly BOOT_CONFIG)
+ * and returning the extracted fields BOOT_ACK, BOOT_PARTITION_ENABLE and
+ * PARTITION_ACCESS.
+ */
+int mmc_get_part_conf(struct mmc *mmc, u8 *ack, u8 *part_num, u8 *access)
+{
+	int err;
+	u8 part_conf;
+
+	ALLOC_CACHE_ALIGN_BUFFER(u8, ext_csd, MMC_MAX_BLOCK_LEN);
+
+	mmc->erase_grp_size = 1;
+	mmc->part_config = MMCPART_NOAVAILABLE;
+
+	if (IS_SD(mmc) || (mmc->version < MMC_VERSION_4))
+		return CMD_RET_FAILURE;
+
+	err = mmc_send_ext_csd(mmc, ext_csd);
+	if (err)
+		return err;
+
+	part_conf = ext_csd[EXT_CSD_PART_CONF];
+
+	*ack = EXT_CSD_EXTRACT_BOOT_ACK(part_conf);
+	*part_num = EXT_CSD_EXTRACT_BOOT_PART(part_conf);
+	*access = EXT_CSD_EXTRACT_PARTITION_ACCESS(part_conf);
+
+	return CMD_RET_SUCCESS;
+}
+
+/*
  * Modify EXT_CSD[162] which is RST_n_FUNCTION based on the given value
  * for enable.  Note that this is a write-once field for non-zero values.
  *

@@ -222,6 +222,10 @@
 #define EXT_CSD_BOOT_PART_NUM(x)	(x << 3)
 #define EXT_CSD_PARTITION_ACCESS(x)	(x << 0)
 
+#define EXT_CSD_EXTRACT_BOOT_ACK(x)		(((x) >> 6) & 1)
+#define EXT_CSD_EXTRACT_BOOT_PART(x)		(((x) >> 3) & 0x7)
+#define EXT_CSD_EXTRACT_PARTITION_ACCESS(x)	((x) & 0x7)
+
 #define EXT_CSD_BOOT_BUS_WIDTH_MODE(x)	(x << 3)
 #define EXT_CSD_BOOT_BUS_WIDTH_RESET(x)	(x << 2)
 #define EXT_CSD_BOOT_BUS_WIDTH_WIDTH(x)	(x)
@@ -428,6 +432,8 @@ int mmc_boot_partition_size_change(struct mmc *mmc, unsigned long bootsize,
 					unsigned long rpmbsize);
 /* Function to modify the PARTITION_CONFIG field of EXT_CSD */
 int mmc_set_part_conf(struct mmc *mmc, u8 ack, u8 part_num, u8 access);
+/* Function to read back the PARTITION_CONFIG field of EXT_CSD */
+int mmc_get_part_conf(struct mmc *mmc, u8 *ack, u8 *part_num, u8 *access);
 /* Function to modify the BOOT_BUS_WIDTH field of EXT_CSD */
 int mmc_set_boot_bus_width(struct mmc *mmc, u8 width, u8 reset, u8 mode);
 /* Function to modify the RST_n_FUNCTION field of EXT_CSD */
