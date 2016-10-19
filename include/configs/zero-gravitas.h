@@ -82,8 +82,8 @@
 		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
 
 #define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev}; " \
 	"run memboot; " \
+	"mmc dev ${mmcdev}; " \
 	"if mmc rescan; then " \
 		"if run loadimage; then " \
 			"run mmcboot; " \
