@@ -330,6 +330,21 @@ int power_init_board(void)
 		return ret;
 	}
 
+	/* Get ID, verify it is a supported version */
+	pmic_reg_read(p, PFUZE100_DEVICEID, &id);
+	id = id & 0xf;
+	printf("PMIC: PFUZE100 ID=0x%02x\n", id);
+	if (id == 0) {
+		switch_num = 6;
+		offset = PFUZE100_SW1CMODE;
+	} else if (id == 1) {
+		switch_num = 4;
+		offset = PFUZE100_SW2MODE;
+	} else {
+		printf("PMIC: PFUZE100 ID not supported, id=%d\n", id);
+		return -EINVAL;
+	}
+
 	/* Set SW1AB stanby volage to 0.975V */
 	pmic_reg_read(p, PFUZE100_SW1ABSTBY, &reg);
 	reg &= ~SW1x_STBY_MASK;
@@ -365,21 +380,6 @@ int power_init_board(void)
 	reg &= ~LDO_VOL_MASK;
 	reg |= LDOB_3_30V;
 	pmic_reg_write(p, PFUZE100_VGEN6VOL, reg);
-
-	/* Get ID, verify it is a supported version */
-	pmic_reg_read(p, PFUZE100_DEVICEID, &id);
-	id = id & 0xf;
-	printf("PMIC: PFUZE100 ID=0x%02x\n", id);
-	if (id == 0) {
-		switch_num = 6;
-		offset = PFUZE100_SW1CMODE;
-	} else if (id == 1) {
-		switch_num = 4;
-		offset = PFUZE100_SW2MODE;
-	} else {
-		printf("PMIC: PFUZE100 ID not supported, id=%d\n", id);
-		return -EINVAL;
-	}
 
 	/* Set modes */
 	ret = pmic_reg_write(p, PFUZE100_SW1ABMODE, APS_PFM);
