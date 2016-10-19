@@ -78,7 +78,7 @@
 			"max17135:vcom=${vcom} " \
 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
-		"g_mass_storage.iSerialNumber=\"\"; "\
+		"g_mass_storage.iSerialNumber=\"\" rdinit=/sbin/init; "\
 		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
 
 #define CONFIG_BOOTCOMMAND \
