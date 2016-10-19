@@ -272,6 +272,45 @@ struct i2c_pads_info i2c_pad_info1 = {
 	},
 };
 
+static void pfuze100_dump(struct pmic *p)
+{
+	unsigned int reg;
+
+	pmic_reg_read(p, PFUZE100_DEVICEID, &reg);
+
+	/* Interrupt registers, reason for poweroff etc. */
+	pmic_reg_read(p, PFUZE100_INTSTAT0, &reg);
+	printf("PMIC: INTSTAT0: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT1, &reg);
+	printf("PMIC: INTSTAT1: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT3, &reg);
+	printf("PMIC: INTSTAT3: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_INTSTAT4, &reg);
+	printf("PMIC: INTSTAT4: %x\n", reg);
+
+	/* Switch to extended register page for OTP SW4 voltage */
+	reg = PFUZE100_PAGE_EXT1;
+	pmic_reg_write(p, PFUZE100_PAGESELECT, reg);
+
+	/* Read set SW4 voltage from OTP register */
+	pmic_reg_read(p, PFUZE100_SW4OTPVOLT, &reg);
+	printf("PMIC: SW4 OTP volt before: %x\n", reg);
+
+	/* Check fuse settings */
+	pmic_reg_read(p, PFUZE100_OTP_FUZE_POR1, &reg);
+	printf("PMIC: POR1: %x\n", reg);
+	pmic_reg_read(p, PFUZE100_OTP_FUZE_POR_XOR, &reg);
+	printf("PMIC: POR XOR: %x\n", reg);
+
+	/* Switch back to normal pages */
+	reg = PFUZE100_PAGE_FUNC;
+	pmic_reg_write(p, PFUZE100_PAGESELECT, reg);
+
+	/* Read from normal register */
+	pmic_reg_read(p, PFUZE100_SW4VOL, &reg);
+	printf("First SW4 voltage from reg: %x\n", reg);
+}
+
 int power_init_board(void)
 {
 	struct pmic *p;
@@ -286,11 +325,10 @@ int power_init_board(void)
 
 	p = pmic_get("PFUZE100");
 	ret = pmic_probe(p);
-	if (ret)
+	if (ret) {
+		printf("PMIC: Unable to find PFUZE100!\n");
 		return ret;
-
-	pmic_reg_read(p, PFUZE100_DEVICEID, &reg);
-	printf("PMIC:  PFUZE100 ID=0x%02x\n", reg);
+	}
 
 	/* Set SW1AB stanby volage to 0.975V */
 	pmic_reg_read(p, PFUZE100_SW1ABSTBY, &reg);
@@ -316,15 +354,6 @@ int power_init_board(void)
 	reg |= SW1xCONF_DVSSPEED_4US;
 	pmic_reg_write(p, PFUZE100_SW1CCONF, reg);
 
-	pmic_reg_read(p, PFUZE100_INTSTAT0, &reg);
-	printf("INSTAT0: %x\n", reg);
-	pmic_reg_read(p, PFUZE100_INTSTAT1, &reg);
-	printf("INSTAT1: %x\n", reg);
-	pmic_reg_read(p, PFUZE100_INTSTAT3, &reg);
-	printf("INSTAT3: %x\n", reg);
-	pmic_reg_read(p, PFUZE100_INTSTAT4, &reg);
-	printf("INSTAT4: %x\n", reg);
-
 	/* Set 3V3_SW4 voltage to 3.3V */
 	pmic_reg_read(p, PFUZE100_SW4VOL, &reg);
 	reg &= ~SW4_VOL_MASK;
@@ -337,11 +366,10 @@ int power_init_board(void)
 	reg |= LDOB_3_30V;
 	pmic_reg_write(p, PFUZE100_VGEN6VOL, reg);
 
-
-	/* Set modes */
+	/* Get ID, verify it is a supported version */
 	pmic_reg_read(p, PFUZE100_DEVICEID, &id);
 	id = id & 0xf;
-
+	printf("PMIC: PFUZE100 ID=0x%02x\n", id);
 	if (id == 0) {
 		switch_num = 6;
 		offset = PFUZE100_SW1CMODE;
@@ -349,10 +377,11 @@ int power_init_board(void)
 		switch_num = 4;
 		offset = PFUZE100_SW2MODE;
 	} else {
-		printf("Not supported, id=%d\n", id);
+		printf("PMIC: PFUZE100 ID not supported, id=%d\n", id);
 		return -EINVAL;
 	}
 
+	/* Set modes */
 	ret = pmic_reg_write(p, PFUZE100_SW1ABMODE, APS_PFM);
 	if (ret < 0) {
 		printf("Set SW1AB mode error!\n");
@@ -367,6 +396,9 @@ int power_init_board(void)
 			return ret;
 		}
 	}
+
+	/* Dump some values from registers for debugging */
+	pfuze100_dump(p);
 
 	return ret;
 }

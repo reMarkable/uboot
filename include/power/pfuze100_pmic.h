@@ -75,7 +75,19 @@ enum {
 	PFUZE100_VGEN5VOL	= 0x70,
 	PFUZE100_VGEN6VOL	= 0x71,
 
-	PFUZE100_NUM_OF_REGS	= 0x7f,
+	PFUZE100_PAGESELECT	= 0x7f,
+
+	PFUZE100_SW4OTPVOLT	= 0xb8,
+
+	PFUZE100_OTP_FUZE_POR1	= 0xe4,
+	PFUZE100_OTP_FUZE_POR_XOR	= 0xe7,
+
+
+	/* Normal/page 1 registers */
+	/*PFUZE100_NUM_OF_REGS	= 0x7f,*/
+
+	/* All, including extended/page 2 registers */
+	PFUZE100_NUM_OF_REGS	= 0xfa,
 };
 
 /* Registor offset based on VOLT register */
@@ -84,6 +96,10 @@ enum {
 #define PFUZE100_OFF_OFFSET	2
 #define PFUZE100_MODE_OFFSET	3
 #define PFUZE100_CONF_OFFSET	4
+
+#define PFUZE100_PAGE_FUNC	0x0
+#define PFUZE100_PAGE_EXT1	0x1
+#define PFUZE100_PAGE_EXT2	0x2
 
 /*
  * Buck Regulators
@@ -94,7 +110,7 @@ enum {
 /* SW4 Output Voltage Configuration */
 #define SW4_1_800V 56
 #define SW4_3_300V 114
-#define SW4_VOL_MASK 0x3F
+#define SW4_VOL_MASK 0x7F
 
 /* SW1A/B/C Output Voltage Configuration */
 #define SW1x_0_300V 0
