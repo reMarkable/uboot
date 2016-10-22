@@ -72,6 +72,28 @@ DECLARE_GLOBAL_DATA_PTR;
 #define KBD_STAT_KRIE	(0x1 << 9) /* Key Release Interrupt Enable */
 #define KBD_STAT_KPPEN	(0x1 << 10) /* Keypad Clock Enable */
 
+/* For the bq27441 fuel gauge */
+#define BQ27441_I2C_ADDR	0x55
+
+#define BQ27441_REG_VOLTAGE	0x04
+#define BQ27441_REG_CURRENT	0x10
+#define BQ27441_REG_CHARGE	0x0c
+#define BQ27441_REG_FULL_CHARGE	0x0e
+#define BQ27441_REG_FLAGS	0x06
+#define BQ27441_REG_PERCENT	0x1c
+
+#define BQ27441_FLAG_DISCHARGE	BIT(0)
+#define BQ27441_FLAG_UNDERTEMP	BIT(14)
+#define BQ27441_FLAG_OVERTEMP	BIT(15)
+#define BQ27441_FLAG_FASTCHARGE	BIT(8)
+#define BQ27441_FLAG_FULLCHARGE	BIT(9)
+#define BQ27441_FLAG_LOWCHARGE	BIT(2)
+#define BQ27441_FLAG_CRITCHARGE	BIT(1)
+
+/* For the BQ24133 charger */
+#define BQ24133_CHRGR_OK	IMX_GPIO_NR(4, 1)
+
+
 
 int dram_init(void)
 {
@@ -311,6 +333,78 @@ static void pfuze100_dump(struct pmic *p)
 	printf("First SW4 voltage from reg: %x\n", reg);
 }
 
+static int check_battery(void)
+{
+	int voltage, full_charge, charge, flags, percent;
+	int ret;
+	uint8_t message[2];
+
+	I2C_SET_BUS(I2C_PMIC);
+
+	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_VOLTAGE, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read voltage from fuel gauge\n");
+		return -1;
+	}
+	voltage = get_unaligned_le16(message);
+
+	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_CHARGE, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read charge from fuel gauge\n");
+		return -1;
+	}
+	charge = get_unaligned_le16(message);
+
+	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_FULL_CHARGE, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read full charge from fuel gauge\n");
+		return -1;
+	}
+	full_charge = get_unaligned_le16(message);
+
+	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read percent charge from fuel gauge\n");
+		return -1;
+	}
+	percent = get_unaligned_le16(message);
+
+	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read full charge from fuel gauge\n");
+		return -1;
+	}
+	flags = get_unaligned_le16(message);
+
+	if (flags & BQ27441_FLAG_DISCHARGE) {
+		printf("Battery discharging\n");
+	}
+	if (flags & BQ27441_FLAG_UNDERTEMP) {
+		printf("Battery undertemp condition detected\n");
+	}
+	if (flags & BQ27441_FLAG_OVERTEMP) {
+		printf("Battery overtemp condition detected\n");
+	}
+	if (flags & BQ27441_FLAG_FASTCHARGE) {
+		printf("Battery fastcharge available\n");
+	}
+	if (flags & BQ27441_FLAG_FULLCHARGE) {
+		printf("Battery full charge\n");
+	}
+	if (flags & BQ27441_FLAG_LOWCHARGE) {
+		printf("Battery low charge\n");
+	}
+	if (flags & BQ27441_FLAG_CRITCHARGE) {
+		printf("Battery critically low charge\n");
+	}
+
+	printf("Battery full charge: %d mAh\n", full_charge);
+	printf("Battery charge: %d mAh\n", charge);
+	printf("Battery voltage: %d mV\n", voltage);
+	printf("Battery charge: %d%% mV\n", percent);
+	return 0;
+}
+
 int power_init_board(void)
 {
 	struct pmic *p;
@@ -399,6 +493,8 @@ int power_init_board(void)
 
 	/* Dump some values from registers for debugging */
 	pfuze100_dump(p);
+
+	check_battery();
 
 	return ret;
 }
