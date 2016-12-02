@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2016 reMarkable AS. All Rights Reserved.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -25,7 +26,8 @@ enum {
 	MX6_PAD_SD1_DAT5__GPIO_5_9				= IOMUX_PAD(0x0550, 0x0248, 5, 0x0000, 0, 0),
 	MX6_PAD_SD1_DAT6__USDHC1_DAT6				= IOMUX_PAD(0x0554, 0x024C, 0, 0x0000, 0, 0),
 	MX6_PAD_SD1_DAT7__USDHC1_DAT7				= IOMUX_PAD(0x0558, 0x0250, 0, 0x0000, 0, 0),
-	MX6_PAD_KEY_ROW7__GPIO_4_7					= IOMUX_PAD(0x04B0, 0x01A8, 5, 0x0000, 0, 0),
+	MX6_PAD_KEY_ROW4__GPIO_4_1				= IOMUX_PAD(0x04A4, 0x019C, 5, 0x0000, 0, 0),
+	MX6_PAD_KEY_ROW7__GPIO_4_7				= IOMUX_PAD(0x04B0, 0x01A8, 5, 0x0000, 0, 0),
 	MX6_PAD_SD2_CLK__USDHC2_CLK				= IOMUX_PAD(0x055C, 0x0254, 0, 0x0000, 0, 0),
 	MX6_PAD_SD2_CMD__USDHC2_CMD				= IOMUX_PAD(0x0560, 0x0258, 0, 0x0000, 0, 0),
 	MX6_PAD_SD2_DAT0__USDHC2_DAT0				= IOMUX_PAD(0x0564, 0x025C, 0, 0x0000, 0, 0),

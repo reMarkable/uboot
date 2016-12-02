@@ -102,6 +102,11 @@ int dram_init(void)
 	return 0;
 }
 
+static iomux_v3_cfg_t const charger_pads[] = {
+	/* CHRGR_OK */
+	MX6_PAD_KEY_ROW4__GPIO_4_1 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 static iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_UART1_TXD__UART1_TXD | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_UART1_RXD__UART1_RXD | MUX_PAD_CTRL(UART_PAD_CTRL),
@@ -341,35 +346,35 @@ static int check_battery(void)
 
 	I2C_SET_BUS(I2C_PMIC);
 
-	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_VOLTAGE, 1, message, sizeof(message));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_VOLTAGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read voltage from fuel gauge\n");
 		return -1;
 	}
 	voltage = get_unaligned_le16(message);
 
-	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_CHARGE, 1, message, sizeof(message));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_CHARGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read charge from fuel gauge\n");
 		return -1;
 	}
 	charge = get_unaligned_le16(message);
 
-	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_FULL_CHARGE, 1, message, sizeof(message));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FULL_CHARGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read full charge from fuel gauge\n");
 		return -1;
 	}
 	full_charge = get_unaligned_le16(message);
 
-	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read percent charge from fuel gauge\n");
 		return -1;
 	}
 	percent = get_unaligned_le16(message);
 
-	ret = i2c_read(CONFIG_POWER_CHARGER_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read full charge from fuel gauge\n");
 		return -1;
@@ -401,9 +406,15 @@ static int check_battery(void)
 	printf("Battery full charge: %d mAh\n", full_charge);
 	printf("Battery charge: %d mAh\n", charge);
 	printf("Battery voltage: %d mV\n", voltage);
-	printf("Battery charge: %d%% mV\n", percent);
+	printf("Battery charge: %d%%\n", percent);
 	return 0;
 }
+
+static int check_charger_status(void)
+{
+	return gpio_get_value(BQ24133_CHRGR_OK);
+}
+
 
 int power_init_board(void)
 {
@@ -413,10 +424,20 @@ int power_init_board(void)
 	int ret;
 	unsigned char offset, i, switch_num;
 
+	/* Set up charger */
+	imx_iomux_v3_setup_multiple_pads(charger_pads, ARRAY_SIZE(charger_pads));
+	gpio_direction_input(BQ24133_CHRGR_OK);
+	if (check_charger_status()) {
+		printf("Charging\n");
+	} else {
+		printf("Not charging\n");
+	}
+
 	ret = power_pfuze100_init(I2C_PMIC);
 	if (ret)
 		return ret;
 
+	/* Setup PF0100 */
 	p = pmic_get("PFUZE100");
 	ret = pmic_probe(p);
 	if (ret) {
