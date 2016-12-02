@@ -468,6 +468,8 @@ void mx6_dram_cfg(const struct mx6_ddr_sysinfo *,
 
 #endif /* CONFIG_SPL_BUILD */
 
+#define MX6_MMDC_MDSCR_CON_REQ	0x00008000
+
 #define MX6_MMDC_P0_MDCTL	0x021b0000
 #define MX6_MMDC_P0_MDPDC	0x021b0004
 #define MX6_MMDC_P0_MDOTC	0x021b0008
