@@ -1,7 +1,8 @@
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
+ * Copyright 2016 reMarkable AS
  *
- * Configuration settings for the Freescale i.MX6SL EVK board.
+ * Configuration settings for the reMarkable
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -27,6 +28,9 @@
 
 /* MMC Configs */
 #define CONFIG_SYS_FSL_ESDHC_ADDR	USDHC2_BASE_ADDR
+
+/* Enable reading of serial tag from OCOTP */
+#define CONFIG_SERIAL_TAG
 
 /* I2C Configs */
 #define CONFIG_SYS_I2C
