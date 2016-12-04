@@ -33,6 +33,7 @@
 
 #include <lcd.h>
 #include <mxc_epdc_fb.h>
+#include <splash.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -657,6 +658,20 @@ int board_early_init_f(void)
 	setup_spi();
 #endif
 	return 0;
+}
+
+static struct splash_location splash_locations[] = {
+	{
+		.name = "mmc_fs",
+		.storage = SPLASH_STORAGE_MMC,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "1:1",
+	},
+};
+
+int splash_screen_prepare(void)
+{
+	return splash_source_load(splash_locations, ARRAY_SIZE(splash_locations));
 }
 
 vidinfo_t panel_info = {

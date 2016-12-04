@@ -20,12 +20,14 @@
 
 #define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV /* We don't want to use the EPD for console */
 #define CONFIG_MXC_EPDC
 #define CONFIG_WAVEFORM_BUF_SIZE	SZ_4M
 #define CONFIG_SPLASH_SCREEN
+#define CONFIG_SPLASH_SOURCE
+#define CONFIG_SPLASH_SCREEN_ALIGN
 #define CONFIG_LCD
 #define CONFIG_CMD_BMP
+#define LCD_BPP				LCD_COLOR16
 
 /* Size of malloc() pool, needs space for EPDC working buffer */
 #define CONFIG_SYS_MALLOC_LEN		(SZ_32M)
@@ -65,6 +67,8 @@
 	"ip_dyn=yes\0" \
 	"mmcdev=1\0" \
 	"mmcpart=1\0" \
+	"splashimage=0x80000000\0" \
+	"splashpos=m,m\0" \
 	"mmcroot=/dev/mmcblk1p2 rootwait rw\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 			"root=${mmcroot} max17135:vcom=${vcom};\0" \

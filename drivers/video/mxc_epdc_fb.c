@@ -19,21 +19,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void *lcd_base;			/* Start of framebuffer memory	*/
-void *lcd_console_address;	/* Start of console buffer	*/
-
-int lcd_color_fg;
-int lcd_color_bg;
-
-short console_col;
-short console_row;
-
-int rev;
-
-void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue)
-{
-}
-
 #define TEMP_USE_DEFAULT 8
 
 #define UPDATE_MODE_PARTIAL			0x0
@@ -140,7 +125,6 @@ static void epdc_init_settings(void)
 {
 	u32 reg_val;
 	int num_ce;
-	printf("epdc_init_settings\n");
 
 	/* EPDC_CTRL */
 	reg_val = REG_RD(EPDC_BASE, EPDC_CTRL);
@@ -299,42 +283,14 @@ static void epdc_init_settings(void)
 	REG_WR(EPDC_BASE, EPDC_GPIO, reg_val);
 }
 
-static void draw_mode0(void)
+static void do_update(int mode, int lut_num)
 {
 	int i;
-	printf("draw_mode0\n");
 
 	/* Program EPDC update to process buffer */
 	epdc_set_update_coord(0, 0);
 	epdc_set_update_dimensions(panel_info.vl_col, panel_info.vl_row);
-	epdc_submit_update(0, panel_info.epdc_data.wv_modes.mode_init,
-				UPDATE_MODE_FULL, FALSE, 0);
-
-	debug("Mode0 update - Waiting for LUT to complete...\n");
-
-	/* Will timeout after ~4-5 seconds */
-	for (i = 0; i < 100; i++) {
-		if (!epdc_is_lut_active(0)) {
-			debug("Mode0 init complete after %d iterations\n", i);
-			return;
-		}
-		msleep(100);
-	}
-
-	printf("Mode0 init failed!\n");
-}
-
-static void draw_splash_screen(void)
-{
-	int i;
-	int lut_num = 1;
-	printf("draw_splash_screen\n");
-
-	/* Program EPDC update to process buffer */
-	epdc_set_update_coord(0, 0);
-	epdc_set_update_dimensions(panel_info.vl_col, panel_info.vl_row);
-	epdc_submit_update(lut_num, panel_info.epdc_data.wv_modes.mode_gc16,
-		UPDATE_MODE_FULL, FALSE, 0);
+	epdc_submit_update(lut_num, mode, UPDATE_MODE_FULL, FALSE, 0);
 
 	for (i = 0; i < 40; i++) {
 		if (!epdc_is_lut_active(lut_num)) {
@@ -343,24 +299,14 @@ static void draw_splash_screen(void)
 		}
 		msleep(100);
 	}
-	printf("Splash screen update failed!\n");
 }
 
 void lcd_enable(void)
 {
-	printf("lcd_enable\n");
 	epdc_power_on();
-	draw_mode0();
 
-	if (board_setup_logo_file(lcd_base)) {
-		debug("Load logo failed!\n");
-		return;
-	}
-	flush_cache((ulong)lcd_base, panel_info.vl_col * panel_info.vl_row);
-
-	/* Draw data to display */
-
-	draw_splash_screen();
+	do_update(panel_info.epdc_data.wv_modes.mode_init, 0);
+	do_update(panel_info.epdc_data.wv_modes.mode_gc16, 1);
 }
 
 void lcd_disable(void)
@@ -379,6 +325,7 @@ void lcd_panel_disable(void)
 void lcd_ctrl_init(void *lcdbase)
 {
 	unsigned int val;
+	int rev;
 
 	/*
 	 * We rely on lcdbase being a physical address, i.e., either MMU off,
@@ -402,9 +349,6 @@ void lcd_ctrl_init(void *lcdbase)
 		printf("EPDC: Error allocating waveform buffer!\n");
 		return;
 	}
-
-	lcd_color_fg = 0x00;
-	lcd_color_bg = 0xFF;
 
 	/* Reset */
 	REG_SET(EPDC_BASE, EPDC_CTRL, EPDC_CTRL_SFTRST);
@@ -449,14 +393,8 @@ void lcd_ctrl_init(void *lcdbase)
 	/* Initialize EPDC, passing pointer to EPDC registers */
 	epdc_init_settings();
 
-	lcd_base = lcdbase;
+	lcd_set_flush_dcache(1);
 
 	return;
-}
-
-ulong calc_fbsize(void)
-{
-	return panel_info.vl_row * panel_info.vl_col * 2 \
-		* NBITS(panel_info.vl_bpix) / 8;
 }
 
