@@ -97,6 +97,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 /* For the BQ24133 charger */
 #define BQ24133_CHRGR_OK	IMX_GPIO_NR(4, 1)
+#define USB_POWER_UP		IMX_GPIO_NR(4, 6)
 
 
 
@@ -110,6 +111,9 @@ int dram_init(void)
 static iomux_v3_cfg_t const charger_pads[] = {
 	/* CHRGR_OK */
 	MX6_PAD_KEY_ROW4__GPIO_4_1 | MUX_PAD_CTRL(NO_PAD_CTRL),
+
+	/* USB_POWER_UP */
+	MX6_PAD_KEY_COL7__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static iomux_v3_cfg_t const uart1_pads[] = {
@@ -436,6 +440,7 @@ int power_init_board(void)
 
 	/* Set up charger */
 	imx_iomux_v3_setup_multiple_pads(charger_pads, ARRAY_SIZE(charger_pads));
+	gpio_request(BQ24133_CHRGR_OK, "bq24133_chrgr_ok");
 	gpio_direction_input(BQ24133_CHRGR_OK);
 	if (check_charger_status()) {
 		printf("Charging\n");
@@ -526,6 +531,11 @@ int power_init_board(void)
 	pfuze100_dump(p);
 
 	check_battery();
+
+	/* Power is OK, disable the circuitry that automatically
+	 * powers up the board when USB is plugged in		*/
+	gpio_request(USB_POWER_UP, "usb_power_up");
+	gpio_direction_output(USB_POWER_UP, 1);
 
 	return ret;
 }
