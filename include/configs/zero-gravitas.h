@@ -18,8 +18,17 @@
 #include "imx6_spl.h"
 #endif
 
-/* Size of malloc() pool */
-#define CONFIG_SYS_MALLOC_LEN		(3 * SZ_1M)
+#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
+
+#define CONFIG_SYS_CONSOLE_IS_IN_ENV /* We don't want to use the EPD for console */
+#define CONFIG_MXC_EPDC
+#define CONFIG_WAVEFORM_BUF_SIZE	SZ_4M
+#define CONFIG_SPLASH_SCREEN
+#define CONFIG_LCD
+#define CONFIG_CMD_BMP
+
+/* Size of malloc() pool, needs space for EPDC working buffer */
+#define CONFIG_SYS_MALLOC_LEN		(SZ_32M)
 
 #define CONFIG_BOARD_EARLY_INIT_F
 
@@ -118,18 +127,8 @@
 /* Environment organization */
 #define CONFIG_ENV_SIZE			SZ_8K
 
-#if defined CONFIG_SYS_BOOT_SPINOR
-#define CONFIG_ENV_IS_IN_SPI_FLASH
-#define CONFIG_ENV_OFFSET               (768 * 1024)
-#define CONFIG_ENV_SECT_SIZE            (64 * 1024)
-#define CONFIG_ENV_SPI_BUS              CONFIG_SF_DEFAULT_BUS
-#define CONFIG_ENV_SPI_CS               CONFIG_SF_DEFAULT_CS
-#define CONFIG_ENV_SPI_MODE             CONFIG_SF_DEFAULT_MODE
-#define CONFIG_ENV_SPI_MAX_HZ           CONFIG_SF_DEFAULT_SPEED
-#else
 #define CONFIG_ENV_OFFSET		(8 * SZ_64K)
 #define CONFIG_ENV_IS_IN_MMC
-#endif
 
 #ifdef CONFIG_CMD_SF
 #define CONFIG_MXC_SPI

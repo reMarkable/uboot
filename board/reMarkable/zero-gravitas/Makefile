@@ -1,6 +1,6 @@
-# (C) Copyright 2013 Freescale Semiconductor, Inc.
+# (C) Copyright 2016 reMarkable AS
 #
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-obj-y  := zero-gravitas.o
+obj-y  := zero-gravitas.o epdc_setup.o
