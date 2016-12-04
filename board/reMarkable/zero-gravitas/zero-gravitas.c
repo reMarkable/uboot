@@ -57,6 +57,11 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define ETH_PHY_POWER	IMX_GPIO_NR(4, 21)
 
+/* GPIO keys */
+#define GPIO_KEY_LEFT	IMX_GPIO_NR(3, 24)
+#define GPIO_KEY_HOME	IMX_GPIO_NR(3, 26)
+#define GPIO_KEY_RIGHT	IMX_GPIO_NR(3, 28)
+
 /*
  * For handling the keypad
  */
@@ -153,6 +158,12 @@ static iomux_v3_cfg_t const key_pads[] = {
 	MX6_PAD_KEY_COL0__KEY_COL0 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_KEY_COL1__KEY_COL1 | MUX_PAD_CTRL(NO_PAD_CTRL),
 	MX6_PAD_KEY_COL2__KEY_COL2 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+static iomux_v3_cfg_t const gpio_key_pads[] = {
+	MX6_PAD_KEY_COL0__GPIO_3_24 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL1__GPIO_3_26 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_KEY_COL2__GPIO_3_28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static void setup_iomux_uart(void)
@@ -415,7 +426,6 @@ static int check_charger_status(void)
 	return gpio_get_value(BQ24133_CHRGR_OK);
 }
 
-
 int power_init_board(void)
 {
 	struct pmic *p;
@@ -574,6 +584,30 @@ int board_early_init_f(void)
 }
 
 /*
+ * Sets up GPIO keys and checks for magic key combo
+ */
+static int check_gpio_keypress(void)
+{
+	int left, home, right;
+
+	/* Set up pins */
+	imx_iomux_v3_setup_multiple_pads(gpio_key_pads, ARRAY_SIZE(gpio_key_pads));
+
+	gpio_request(GPIO_KEY_LEFT, "key_left");
+	gpio_direction_input(GPIO_KEY_LEFT);
+	gpio_request(GPIO_KEY_HOME, "key_home");
+	gpio_direction_input(GPIO_KEY_HOME);
+	gpio_request(GPIO_KEY_RIGHT, "key_right");
+	gpio_direction_input(GPIO_KEY_RIGHT);
+
+	left = gpio_get_value(GPIO_KEY_LEFT);
+	home = gpio_get_value(GPIO_KEY_HOME);
+	right = gpio_get_value(GPIO_KEY_RIGHT);
+
+	return !left && home && !right;
+}
+
+/*
  * Sets up the keypad and then checks for a magic key combo
  */
 static int check_keypress(void)
@@ -676,7 +710,7 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
-	if (check_keypress()) {
+	if (check_keypress() || check_gpio_keypress()) {
 		printf("Magic key press detected, launching USB download mode\n");
 		hab_rvt_failsafe(); /* This never returns, hopefully */
 	}
