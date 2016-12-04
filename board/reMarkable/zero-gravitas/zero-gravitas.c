@@ -675,19 +675,14 @@ int splash_screen_prepare(void)
 }
 
 vidinfo_t panel_info = {
-	.vl_refresh = 75,
 	.vl_col = 1872,
 	.vl_row = 1404,
-	.vl_pixclock = 120000000,
 	.vl_left_margin = 52,
 	.vl_right_margin = 75,
 	.vl_upper_margin = 4,
 	.vl_lower_margin = 14,
 	.vl_hsync = 60,
 	.vl_vsync = 2,
-	.vl_sync = 0,
-	.vl_mode = 0,
-	.vl_flag = 0,
 	.vl_bpix = 3,
 	.cmap = 0,
 };

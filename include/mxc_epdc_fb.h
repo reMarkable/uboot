@@ -559,6 +559,57 @@ int board_setup_waveform_file(ulong waveform_buf);
 void epdc_power_on(void);
 void epdc_power_off(void);
 
-extern void *lcd_base;
+struct waveform_modes {
+	int mode_init;
+	int mode_du;
+	int mode_gc4;
+	int mode_gc8;
+	int mode_gc16;
+	int mode_gc32;
+};
+
+struct epdc_timing_params {
+    int vscan_holdoff;
+    int sdoed_width;
+    int sdoed_delay;
+    int sdoez_width;
+    int sdoez_delay;
+    int gdclk_hp_offs;
+    int gdsp_offs;
+    int gdoe_offs;
+    int gdclk_offs;
+    int num_ce;
+};
+
+struct epdc_data_struct {
+	/* EPDC buffer pointers */
+	u_long working_buf_addr;
+	u_long waveform_buf_addr;
+
+	/* Waveform mode definitions */
+	struct waveform_modes wv_modes;
+	struct epdc_timing_params epdc_timings;
+};
+
+typedef struct vidinfo {
+	ushort	vl_col;		/* Number of columns (i.e. 160) */
+	ushort	vl_row;		/* Number of rows (i.e. 100) */
+	ushort	vl_rot;		/* Rotation of Display (0, 1, 2, 3) */
+	u_long vl_left_margin;  /* Horizontal back porch */
+	u_long vl_right_margin; /* Horizontal front porch */
+	u_long vl_upper_margin; /* Vertical back porch */
+	u_long vl_lower_margin; /* Vertical front porch */
+	u_long vl_hsync;        /* Horizontal sync pulse length */
+	u_long vl_vsync;        /* Vertical sync pulse length */
+	u_char	vl_bpix;	/* Bits per pixel, 0 = 1 */
+	ushort	*cmap;		/* Pointer to the colormap */
+	void	*priv;		/* Pointer to driver-specific data */
+	struct epdc_data_struct epdc_data;
+} vidinfo_t;
+
+static __maybe_unused ushort *configuration_get_cmap(void)
+{
+	return panel_info.cmap;
+}
 
 #endif	/* __EPDC_REGS_INCLUDED__ */
