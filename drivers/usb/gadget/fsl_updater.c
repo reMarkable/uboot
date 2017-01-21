@@ -19,6 +19,8 @@
 
 #include "fsl_updater.h"
 
+#include "uuc.h"
+
 /*#include "storage_common.c"*/
 
 static u64 get_be64(u8 *buf)
@@ -402,29 +404,40 @@ static int utp_exec(struct fsg_dev *fsg,
 {
 	struct utp_user_data *uud = NULL, *uud2r;
 	struct utp_context *ctx = UTP_CTX(fsg);
+	struct utp_message *answer;
 
 	ctx->counter = 0xFFFF;
-	uud2r = utp_user_data_alloc(cmdsize + 1);
+	answer = utp_handle_command(command, payload);
+
+	/*uud2r = utp_user_data_alloc(cmdsize + 1);
 	if (!uud2r)
 		return -ENOMEM;
 	uud2r->data.flags = UTP_FLAG_COMMAND;
 	uud2r->data.payload = payload;
+
+
 	strncpy(uud2r->data.command, command, cmdsize);
 
 	mutex_lock(&ctx->lock);
 	list_add_tail(&uud2r->link, &ctx->read);
-	mutex_unlock(&ctx->lock);
+	mutex_unlock(&ctx->lock);*/
 	/* wake up the read routine */
-	wake_up(&ctx->wq);
+	/*wake_up(&ctx->wq);*/
 
-	if (command[0] == '!')	/* there will be no response */
+	if (command[0] == '!') {	/* there will be no response */
+		free(answer);
 		return 0;
+	}
+
+	memcpy(ctx->buffer, answer->data, answer->bufsize);
+	UTP_SS_SIZE(fsg, answer->bufsize);
+	free(answer);
 
 	/*
 	 * the user program (uuc) will return utp_message
 	 * and add list to write list
 	 */
-	WAIT_ACTIVITY(write);
+/*	WAIT_ACTIVITY(write);
 
 	mutex_lock(&ctx->lock);
 	if (!list_empty(&ctx->write)) {
@@ -443,8 +456,8 @@ static int utp_exec(struct fsg_dev *fsg,
 	mutex_unlock(&ctx->lock);
 
 	if (uud->data.flags & UTP_FLAG_DATA) {
-		memcpy(ctx->buffer, uud->data.data, uud->data.bufsize);
-		UTP_SS_SIZE(fsg, uud->data.bufsize);
+		memcpy(ctx->buffer, answer->data, answer->bufsize);
+		UTP_SS_SIZE(fsg, answer->bufsize);
 	} else if (uud->data.flags & UTP_FLAG_REPORT_BUSY) {
 		UTP_SS_BUSY(fsg, ctx->counter);
 	} else if (uud->data.flags & UTP_FLAG_STATUS) {
@@ -454,8 +467,9 @@ static int utp_exec(struct fsg_dev *fsg,
 	} else {
 		pr_debug("%s: pass returned in EXEC stage. \n", __func__);
 		UTP_SS_PASS(fsg);
-	}
-	utp_user_data_free(uud);
+	} */
+
+	/*utp_user_data_free(uud);*/
 	return 0;
 }
 

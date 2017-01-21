@@ -101,21 +101,6 @@ static struct utp_context {
 	u32 cur_state;
 } utp_context;
 
-/*static const struct file_operations utp_fops = {
-	.open	= nonseekable_open,
-	.read	= utp_file_read,
-	.write	= utp_file_write,
-	 .ioctl  = utp_ioctl, 
-	.unlocked_ioctl  = utp_ioctl,
-};
-
-static struct miscdevice utp_dev = {
-	.minor	= UTP_MINOR,
-	.name	= "utp",
-	.fops	= &utp_fops,
-};
-*/
-
 #define UTP_FLAG_COMMAND	0x00000001
 #define UTP_FLAG_DATA		0x00000002
 #define UTP_FLAG_STATUS		0x00000004
