@@ -30,6 +30,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define msleep(a)	udelay(a * 1000)
 
+__weak void lcd_setcolreg(ushort regno, ushort red, ushort green, ushort blue)
+{
+}
 
 /********************************************************
  * Start Low-Level EPDC Functions
