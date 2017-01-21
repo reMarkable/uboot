@@ -18,6 +18,10 @@
 #include "imx6_spl.h"
 #endif
 
+#define CONFIG_USB_GADGET
+#define CONFIG_USB_FUNCTION_MASS_STORAGE
+#define CONFIG_USB_FUNCTION_FSL_UTP
+
 #define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 
 #define CONFIG_MXC_EPDC

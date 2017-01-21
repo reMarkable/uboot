@@ -258,6 +258,12 @@
 #include <usb/lin_gadget_compat.h>
 #include <g_dnl.h>
 
+#ifdef CONFIG_USB_FUNCTION_FSL_UTP
+#include "fsl_updater.h"
+#endif
+
+#include "f_mass_storage.h"
+
 /*------------------------------------------------------------------------*/
 
 #define FSG_DRIVER_DESC	"Mass Storage Function"
@@ -273,15 +279,6 @@ static const char fsg_string_interface[] = "Mass Storage";
 #include "storage_common.c"
 
 /*-------------------------------------------------------------------------*/
-
-#define GFP_ATOMIC ((gfp_t) 0)
-#define PAGE_CACHE_SHIFT	12
-#define PAGE_CACHE_SIZE		(1 << PAGE_CACHE_SHIFT)
-#define kthread_create(...)	__builtin_return_address(0)
-#define wait_for_completion(...) do {} while (0)
-
-struct kref {int x; };
-struct completion {int x; };
 
 inline void set_bit(int nr, volatile void *addr)
 {
@@ -303,67 +300,6 @@ inline void clear_bit(int nr, volatile void *addr)
 	*a &= ~mask;
 }
 
-struct fsg_dev;
-struct fsg_common;
-
-/* Data shared by all the FSG instances. */
-struct fsg_common {
-	struct usb_gadget	*gadget;
-	struct fsg_dev		*fsg, *new_fsg;
-
-	struct usb_ep		*ep0;		/* Copy of gadget->ep0 */
-	struct usb_request	*ep0req;	/* Copy of cdev->req */
-	unsigned int		ep0_req_tag;
-
-	struct fsg_buffhd	*next_buffhd_to_fill;
-	struct fsg_buffhd	*next_buffhd_to_drain;
-	struct fsg_buffhd	buffhds[FSG_NUM_BUFFERS];
-
-	int			cmnd_size;
-	u8			cmnd[MAX_COMMAND_SIZE];
-
-	unsigned int		nluns;
-	unsigned int		lun;
-	struct fsg_lun          luns[FSG_MAX_LUNS];
-
-	unsigned int		bulk_out_maxpacket;
-	enum fsg_state		state;		/* For exception handling */
-	unsigned int		exception_req_tag;
-
-	enum data_direction	data_dir;
-	u32			data_size;
-	u32			data_size_from_cmnd;
-	u32			tag;
-	u32			residue;
-	u32			usb_amount_left;
-
-	unsigned int		can_stall:1;
-	unsigned int		free_storage_on_release:1;
-	unsigned int		phase_error:1;
-	unsigned int		short_packet_received:1;
-	unsigned int		bad_lun_okay:1;
-	unsigned int		running:1;
-
-	int			thread_wakeup_needed;
-	struct completion	thread_notifier;
-	struct task_struct	*thread_task;
-
-	/* Callback functions. */
-	const struct fsg_operations	*ops;
-	/* Gadget's private data. */
-	void			*private_data;
-
-	const char *vendor_name;		/*  8 characters or less */
-	const char *product_name;		/* 16 characters or less */
-	u16 release;
-
-	/* Vendor (8 chars), product (16 chars), release (4
-	 * hexadecimal digits) and NUL byte */
-	char inquiry_string[8 + 16 + 4 + 1];
-
-	struct kref		ref;
-};
-
 struct fsg_config {
 	unsigned nluns;
 	struct fsg_lun_config {
@@ -383,23 +319,6 @@ struct fsg_config {
 	const char *product_name;		/* 16 characters or less */
 
 	char			can_stall;
-};
-
-struct fsg_dev {
-	struct usb_function	function;
-	struct usb_gadget	*gadget;	/* Copy of cdev->gadget */
-	struct fsg_common	*common;
-
-	u16			interface_number;
-
-	unsigned int		bulk_in_enabled:1;
-	unsigned int		bulk_out_enabled:1;
-
-	unsigned long		atomic_bitflags;
-#define IGNORE_BULK_OUT		0
-
-	struct usb_ep		*bulk_in;
-	struct usb_ep		*bulk_out;
 };
 
 
@@ -2015,6 +1934,12 @@ static int do_scsi_command(struct fsg_common *common)
 		if (reply == 0)
 			reply = do_write(common);
 		break;
+
+#ifdef CONFIG_USB_FUNCTION_FSL_UTP
+	case SC_FSL_UTP:
+		debug("got FSL UTP command\n");
+		return utp_handle_message(common->fsg, common->cmnd, reply);
+#endif
 
 	/* Some mandatory commands that we recognize but don't implement.
 	 * They don't mean much in this setting.  It's left as an exercise

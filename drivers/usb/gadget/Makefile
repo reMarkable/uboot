@@ -21,6 +21,7 @@ obj-$(CONFIG_USB_GADGET_DOWNLOAD) += g_dnl.o
 obj-$(CONFIG_USB_FUNCTION_THOR) += f_thor.o
 obj-$(CONFIG_USB_FUNCTION_DFU) += f_dfu.o
 obj-$(CONFIG_USB_FUNCTION_MASS_STORAGE) += f_mass_storage.o
+obj-$(CONFIG_USB_FUNCTION_FSL_UTP) += fsl_updater.o
 obj-$(CONFIG_USB_FUNCTION_FASTBOOT) += f_fastboot.o
 endif
 ifdef CONFIG_USB_ETHER
