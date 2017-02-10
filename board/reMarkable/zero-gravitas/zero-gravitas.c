@@ -103,6 +103,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define BQ27441_FLAG_LOWCHARGE	BIT(2)
 #define BQ27441_FLAG_CRITCHARGE	BIT(1)
 
+#define SNVS_REG_LPCR		0x20CC038
+#define SNVS_MASK_POWEROFF	(BIT(5) | BIT(6) | BIT(0))
+
 /* For the BQ24133 charger */
 #define BQ24133_CHRGR_OK	IMX_GPIO_NR(4, 1)
 #define USB_POWER_UP		IMX_GPIO_NR(4, 6)
@@ -119,7 +122,9 @@ int dram_init(void)
 static iomux_v3_cfg_t const charger_pads[] = {
 	/* CHRGR_OK */
 	MX6_PAD_KEY_ROW4__GPIO_4_1 | MUX_PAD_CTRL(CHRGSTAT_PAD_CTRL),
+};
 
+static iomux_v3_cfg_t const usb_power_up_pads[] = {
 	/* USB_POWER_UP */
 	MX6_PAD_KEY_COL7__GPIO_4_6 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
@@ -377,6 +382,7 @@ struct i2c_pads_info i2c_pad_info1 = {
 		.gp = IMX_GPIO_NR(3, 12),
 	},
 };
+#undef PC
 
 static void pfuze100_dump(struct pmic *p)
 {
@@ -417,9 +423,41 @@ static void pfuze100_dump(struct pmic *p)
 	printf("First SW4 voltage from reg: %x\n", reg);
 }
 
-static int check_battery(void)
+static void snvs_poweroff(void)
 {
-	int voltage, full_charge, charge, flags, percent;
+	writel(SNVS_MASK_POWEROFF, SNVS_REG_LPCR);
+	while (1) {
+		udelay(500000);
+		printf("Should have halted!\n");
+	}
+}
+
+int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	snvs_poweroff();
+
+	return 0;
+}
+
+static int get_battery_charge(void)
+{
+	int ret;
+	uint8_t message[2];
+
+	I2C_SET_BUS(I2C_PMIC);
+
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read charge from fuel gauge\n");
+		return -1;
+	}
+
+	return get_unaligned_le16(message);
+}
+
+static void battery_dump(void)
+{
+	int voltage, full_charge, charge;
 	int ret;
 	uint8_t message[2];
 
@@ -428,34 +466,39 @@ static int check_battery(void)
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_VOLTAGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read voltage from fuel gauge\n");
-		return -1;
+		return;
 	}
 	voltage = get_unaligned_le16(message);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_CHARGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read charge from fuel gauge\n");
-		return -1;
+		return;
 	}
 	charge = get_unaligned_le16(message);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FULL_CHARGE, 1, message, sizeof(message));
 	if (ret) {
 		printf("Failed to read full charge from fuel gauge\n");
-		return -1;
+		return;
 	}
 	full_charge = get_unaligned_le16(message);
 
-	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
-	if (ret) {
-		printf("Failed to read percent charge from fuel gauge\n");
-		return -1;
-	}
-	percent = get_unaligned_le16(message);
+	printf("Battery full charge: %d mAh\n", full_charge);
+	printf("Battery charge: %d mAh\n", charge);
+	printf("Battery voltage: %d mV\n", voltage);
+}
+
+static int check_battery(void)
+{
+	int ret, flags;
+	uint8_t message[2];
+
+	I2C_SET_BUS(I2C_PMIC);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
 	if (ret) {
-		printf("Failed to read full charge from fuel gauge\n");
+		printf("Failed to read flags from fuel gauge\n");
 		return -1;
 	}
 	flags = get_unaligned_le16(message);
@@ -463,29 +506,30 @@ static int check_battery(void)
 	if (flags & BQ27441_FLAG_DISCHARGE) {
 		printf("Battery discharging\n");
 	}
+
 	if (flags & BQ27441_FLAG_UNDERTEMP) {
-		printf("Battery undertemp condition detected\n");
+		printf("Battery undertemp condition detected, powering off\n");
+		return -1;
 	}
+
 	if (flags & BQ27441_FLAG_OVERTEMP) {
 		printf("Battery overtemp condition detected\n");
+		return -1;
 	}
+
 	if (flags & BQ27441_FLAG_FASTCHARGE) {
 		printf("Battery fastcharge available\n");
 	}
-	if (flags & BQ27441_FLAG_FULLCHARGE) {
+
+	if (flags & BQ27441_FLAG_CRITCHARGE) {
+		printf("Battery critically low, powering off\n");
+		return -1;
+	} else if (flags & BQ27441_FLAG_LOWCHARGE) {
+		printf("Battery low charge\n");
+	} else if (flags & BQ27441_FLAG_FULLCHARGE) {
 		printf("Battery full charge\n");
 	}
-	if (flags & BQ27441_FLAG_LOWCHARGE) {
-		printf("Battery low charge\n");
-	}
-	if (flags & BQ27441_FLAG_CRITCHARGE) {
-		printf("Battery critically low charge\n");
-	}
 
-	printf("Battery full charge: %d mAh\n", full_charge);
-	printf("Battery charge: %d mAh\n", charge);
-	printf("Battery voltage: %d mV\n", voltage);
-	printf("Battery charge: %d%%\n", percent);
 	return 0;
 }
 
@@ -496,12 +540,14 @@ static int check_charger_status(void)
 
 int cmd_check_battery(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+	check_battery();
+	battery_dump();
 	if (check_charger_status()) {
 		printf("Charging\n");
 	} else {
 		printf("Not charging\n");
 	}
-	check_battery();
+	printf("Battery charge: %d%%\n", get_battery_charge());
 
 	return 0;
 }
@@ -513,8 +559,15 @@ int power_init_board(void)
 	struct pmic *p;
 	unsigned int reg;
 	u32 id;
-	int ret;
+	int ret, battery_charge;
 	unsigned char offset, i, switch_num;
+
+	/* Disable the circuitry that automatically
+	 * powers up the board when USB is plugged in */
+	SETUP_IOMUX_PADS(usb_power_up_pads);
+	gpio_request(USB_POWER_UP, "usb_power_up");
+	gpio_direction_output(USB_POWER_UP, 1);
+	udelay(500000);
 
 	/* Set up charger */
 	SETUP_IOMUX_PADS(charger_pads);
@@ -524,6 +577,22 @@ int power_init_board(void)
 		printf("Charging\n");
 	} else {
 		printf("Not charging\n");
+	}
+
+	while ((battery_charge = get_battery_charge()) < 5) {
+		if (!check_charger_status()) {
+			printf("Battery critical, not charging, powering off\n");
+			snvs_poweroff();
+		}
+
+		printf("Battery low, charging, current charge: %d%%\n", battery_charge);
+		/* Sleep for one second */
+		udelay(1000000);
+	}
+
+	if (check_battery() < 0) {
+		printf("Error when checking battery state, powering off\n");
+		snvs_poweroff();
 	}
 
 	ret = power_pfuze100_init(I2C_PMIC);
@@ -608,12 +677,6 @@ int power_init_board(void)
 	/* Dump some values from registers for debugging */
 	pfuze100_dump(p);
 
-	check_battery();
-
-	/* Power is OK, disable the circuitry that automatically
-	 * powers up the board when USB is plugged in		*/
-	gpio_request(USB_POWER_UP, "usb_power_up");
-	gpio_direction_output(USB_POWER_UP, 1);
 
 	return ret;
 }
