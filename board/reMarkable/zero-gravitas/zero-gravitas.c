@@ -687,12 +687,12 @@ int splash_screen_prepare(void)
 vidinfo_t panel_info = {
 	.vl_col = 1872,
 	.vl_row = 1404,
-	.vl_left_margin = 52,
-	.vl_right_margin = 75,
+	.vl_left_margin = 32,
+	.vl_right_margin = 326,
 	.vl_upper_margin = 4,
-	.vl_lower_margin = 14,
-	.vl_hsync = 60,
-	.vl_vsync = 2,
+	.vl_lower_margin = 12,
+	.vl_hsync = 44,
+	.vl_vsync = 1,
 	.vl_bpix = 3,
 	.cmap = 0,
 };
@@ -703,11 +703,11 @@ struct epdc_timing_params panel_timings = {
 	.sdoed_delay = 20,
 	.sdoez_width = 10,
 	.sdoez_delay = 20,
-	.gdclk_hp_offs = 583,
-	.gdsp_offs = 939,
+	.gdclk_hp_offs = 1042,
+	.gdsp_offs = 768,
 	.gdoe_offs = 0,
-	.gdclk_offs = 376,
-	.num_ce = 3,
+	.gdclk_offs = 91,
+	.num_ce = 1,
 };
 
 static void setup_epdc_power(void)
