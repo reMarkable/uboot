@@ -982,20 +982,13 @@ typedef void hab_rvt_failsafe_t(void);
 #define HAB_RVT_FAILSAFE (*(uint32_t *) 0x000000BC)
 #define hab_rvt_failsafe ((hab_rvt_failsafe_t *) HAB_RVT_FAILSAFE)
 
-static void jump_to_failsafe(void)
+int cmd_hab_failsafe(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	/* Re-configure the clock gating like the ROM expects it */
-	struct mxc_ccm_reg *ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-	writel(0xF0C03F0F, &ccm->CCGR0);
-	writel(0xF0FC0000, &ccm->CCGR1);
-	writel(0xFC3FF00C, &ccm->CCGR2);
-	writel(0x3FF00000, &ccm->CCGR3);
-	writel(0x0000FF00, &ccm->CCGR4);
-	writel(0xF0033F0F, &ccm->CCGR5);
-	writel(0xFFFF0303, &ccm->CCGR6);
-
-	hab_rvt_failsafe(); /* This never returns, hopefully */
+	hab_rvt_failsafe();
+	return 0;
 }
+
+U_BOOT_CMD(habfailsafe, CONFIG_SYS_MAXARGS, 1, cmd_hab_failsafe, "jump to ROM failsafe code", "")
 
 int board_init(void)
 {
@@ -1004,7 +997,7 @@ int board_init(void)
 
 	if (check_keypress() || check_gpio_keypress()) {
 		printf("Magic key press detected, launching USB download mode\n");
-		jump_to_failsafe();
+		hab_rvt_failsafe(); /* This never returns, hopefully */
 	}
 
 	setup_epdc();
