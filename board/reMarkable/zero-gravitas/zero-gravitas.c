@@ -239,7 +239,7 @@ static iomux_v3_cfg_t const epdc_disable_pads[] = {
 
 static void setup_iomux_uart(void)
 {
-	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
+	SETUP_IOMUX_PADS(uart1_pads);
 }
 
 #define USDHC1_CD_GPIO	IMX_GPIO_NR(4, 7)
@@ -294,20 +294,17 @@ int board_mmc_init(bd_t *bis)
 	for (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {
 		switch (i) {
 		case 0:
-			imx_iomux_v3_setup_multiple_pads(
-				usdhc1_pads, ARRAY_SIZE(usdhc1_pads));
+			SETUP_IOMUX_PADS(usdhc1_pads);
 			gpio_direction_input(USDHC1_CD_GPIO);
 			usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
 			break;
 		case 1:
-			imx_iomux_v3_setup_multiple_pads(
-				usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
+			SETUP_IOMUX_PADS(usdhc2_pads);
 			/*gpio_direction_input(USDHC2_CD_GPIO);*/
 			usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
 			break;
 		case 2:
-			imx_iomux_v3_setup_multiple_pads(
-				usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
+			SETUP_IOMUX_PADS(usdhc3_pads);
 			/*gpio_direction_input(USDHC3_CD_GPIO);*/
 			usdhc_cfg[2].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
 			break;
@@ -337,23 +334,20 @@ int board_mmc_init(bd_t *bis)
 	port = (val >> 11) & 0x3;
 	switch (port) {
 	case 0:
-		imx_iomux_v3_setup_multiple_pads(usdhc1_pads,
-						 ARRAY_SIZE(usdhc1_pads));
+		SETUP_IOMUX_PADS(usdhc1_pads);
 		gpio_direction_input(USDHC1_CD_GPIO);
 		usdhc_cfg[0].esdhc_base = USDHC1_BASE_ADDR;
 		usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK);
 		break;
 	case 1:
-		imx_iomux_v3_setup_multiple_pads(usdhc2_pads,
-						 ARRAY_SIZE(usdhc2_pads));
+		SETUP_IOMUX_PADS(usdhc2_pads);
 		/*gpio_direction_input(USDHC2_CD_GPIO);*/
 		usdhc_cfg[0].esdhc_base = USDHC2_BASE_ADDR;
 		usdhc_cfg[0].max_bus_width = 4;
 		usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
 		break;
 	case 2:
-		imx_iomux_v3_setup_multiple_pads(usdhc3_pads,
-						 ARRAY_SIZE(usdhc3_pads));
+		SETUP_IOMUX_PADS(usdhc3_pads);
 		/*gpio_direction_input(USDHC3_CD_GPIO);*/
 		usdhc_cfg[0].esdhc_base = USDHC3_BASE_ADDR;
 		usdhc_cfg[0].max_bus_width = 4;
@@ -506,7 +500,7 @@ int power_init_board(void)
 	unsigned char offset, i, switch_num;
 
 	/* Set up charger */
-	imx_iomux_v3_setup_multiple_pads(charger_pads, ARRAY_SIZE(charger_pads));
+	SETUP_IOMUX_PADS(charger_pads);
 	gpio_request(BQ24133_CHRGR_OK, "bq24133_chrgr_ok");
 	gpio_direction_input(BQ24133_CHRGR_OK);
 	if (check_charger_status()) {
@@ -542,7 +536,7 @@ int power_init_board(void)
 		return -EINVAL;
 	}
 
-	/* Set SW1AB stanby volage to 0.975V */
+	/* Set SW1AB standby voltage to 0.975V */
 	pmic_reg_read(p, PFUZE100_SW1ABSTBY, &reg);
 	reg &= ~SW1x_STBY_MASK;
 	reg |= SW1x_0_975V;
@@ -621,8 +615,7 @@ static iomux_v3_cfg_t const usb_otg_pads[] = {
 
 static void setup_usb(void)
 {
-	imx_iomux_v3_setup_multiple_pads(usb_otg_pads,
-					 ARRAY_SIZE(usb_otg_pads));
+	SETUP_IOMUX_PADS(usb_otg_pads);
 }
 
 int board_usb_phy_mode(int port)
@@ -729,15 +722,13 @@ static void setup_epdc_power(void)
 static void epdc_enable_pins(void)
 {
 	/* epdc iomux settings */
-	imx_iomux_v3_setup_multiple_pads(epdc_enable_pads,
-				ARRAY_SIZE(epdc_enable_pads));
+	SETUP_IOMUX_PADS(epdc_enable_pads);
 }
 
 static void epdc_disable_pins(void)
 {
 	/* Configure MUX settings for EPDC pins to GPIO  and drive to 0 */
-	imx_iomux_v3_setup_multiple_pads(epdc_disable_pads,
-				ARRAY_SIZE(epdc_disable_pads));
+	SETUP_IOMUX_PADS(epdc_disable_pads);
 }
 
 static void setup_epdc(void)
@@ -860,7 +851,7 @@ static int check_gpio_keypress(void)
 	int left, home, right;
 
 	/* Set up pins */
-	imx_iomux_v3_setup_multiple_pads(gpio_key_pads, ARRAY_SIZE(gpio_key_pads));
+	SETUP_IOMUX_PADS(gpio_key_pads);
 
 	gpio_request(GPIO_KEY_LEFT, "key_left");
 	gpio_direction_input(GPIO_KEY_LEFT);
@@ -892,7 +883,7 @@ static int check_keypress(void)
 	unsigned short cols_en_mask = 0x7;
 
 	/* Set up pins */
-	imx_iomux_v3_setup_multiple_pads(key_pads, ARRAY_SIZE(key_pads));
+	SETUP_IOMUX_PADS(key_pads);
 
 	/* Initialize keypad */
 	/*
