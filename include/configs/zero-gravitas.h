@@ -15,6 +15,7 @@
 #ifdef CONFIG_SPL
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_MMC_SUPPORT
+#define CONFIG_SPL_BOARD_LOAD_IMAGE
 #include "imx6_spl.h"
 #endif
 
