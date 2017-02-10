@@ -494,6 +494,20 @@ static int check_charger_status(void)
 	return gpio_get_value(BQ24133_CHRGR_OK);
 }
 
+int cmd_check_battery(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	if (check_charger_status()) {
+		printf("Charging\n");
+	} else {
+		printf("Not charging\n");
+	}
+	check_battery();
+
+	return 0;
+}
+
+U_BOOT_CMD(checkbattery, CONFIG_SYS_MAXARGS, 1, cmd_check_battery, "Check battery status", "")
+
 int power_init_board(void)
 {
 	struct pmic *p;
