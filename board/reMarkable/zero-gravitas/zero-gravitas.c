@@ -1058,7 +1058,7 @@ int board_init(void)
 
 int checkboard(void)
 {
-	puts("Board: MX6SLEVK\n");
+	puts("Board: Zero Gravitas\n");
 
 	return 0;
 }
