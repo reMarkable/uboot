@@ -881,7 +881,13 @@ static int check_gpio_keypress(void)
 	home = gpio_get_value(GPIO_KEY_HOME);
 	right = gpio_get_value(GPIO_KEY_RIGHT);
 
-	return !left && home && !right;
+	gpio_free(GPIO_KEY_LEFT);
+	gpio_free(GPIO_KEY_HOME);
+	gpio_free(GPIO_KEY_RIGHT);
+
+	/* It is supposed to be just the home button, but sometimes the values
+	 * are inverted */
+	return (left == right && left != home);
 }
 
 /*
