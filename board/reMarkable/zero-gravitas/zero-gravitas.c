@@ -710,32 +710,6 @@ struct epdc_timing_params panel_timings = {
 	.num_ce = 1,
 };
 
-static void setup_epdc_power(void)
-{
-	/* Setup epdc voltage */
-
-	/* EPDC_PWRSTAT - GPIO2[13] for PWR_GOOD status */
-	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_PWRSTAT__GPIO_2_13 |
-				MUX_PAD_CTRL(EPDC_PAD_CTRL));
-	gpio_direction_input(IMX_GPIO_NR(2, 13));
-
-	/* EPDC_VCOM0 - GPIO2[3] for VCOM control */
-	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_VCOM0__GPIO_2_3 |
-				MUX_PAD_CTRL(EPDC_PAD_CTRL));
-
-	/* Set as output */
-	gpio_direction_output(IMX_GPIO_NR(2, 3), 1);
-
-	/* EPDC_PWRWAKEUP - GPIO2[14] for EPD PMIC WAKEUP */
-	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_PWRWAKEUP__GPIO_2_14 |
-				MUX_PAD_CTRL(EPDC_PAD_CTRL));
-	/* Set as output */
-	gpio_direction_output(IMX_GPIO_NR(2, 14), 1);
-
-	/* Set as output */
-	/*gpio_direction_output(IMX_GPIO_NR(2, 7), 1);*/
-}
-
 static void epdc_enable_pins(void)
 {
 	/* epdc iomux settings */
@@ -753,19 +727,21 @@ static void setup_epdc(void)
 	unsigned int reg;
 	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 
-	/*** epdc Maxim PMIC settings ***/
-
-	/* EPDC PWRSTAT - GPIO2[13] for PWR_GOOD status */
+	/*** EPDC Maxim PMIC settings ***/
+	/* EPDC_PWRSTAT - GPIO2[13] for PWR_GOOD status */
 	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_PWRSTAT__GPIO_2_13 |
 				MUX_PAD_CTRL(EPDC_PAD_CTRL));
+	gpio_direction_input(IMX_GPIO_NR(2, 13));
 
-	/* EPDC VCOM0 - GPIO2[3] for VCOM control */
+	/* EPDC_VCOM0 - GPIO2[3] for VCOM control */
 	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_VCOM0__GPIO_2_3 |
 				MUX_PAD_CTRL(EPDC_PAD_CTRL));
+	gpio_direction_output(IMX_GPIO_NR(2, 3), 0);
 
-	/* UART4 TXD - GPIO2[14] for EPD PMIC WAKEUP */
+	/* EPDC_PWRWAKEUP - GPIO2[14] for EPD PMIC WAKEUP */
 	imx_iomux_v3_setup_pad(MX6_PAD_EPDC_PWRWAKEUP__GPIO_2_14 |
 				MUX_PAD_CTRL(EPDC_PAD_CTRL));
+	gpio_direction_output(IMX_GPIO_NR(2, 14), 0);
 
 	/*** Set pixel clock rates for EPDC ***/
 
@@ -777,7 +753,7 @@ static void setup_epdc(void)
 
 	/* EPDC AXI clk enable */
 	reg = readl(&ccm_regs->CCGR3);
-	reg |= 0x0030;
+	reg |= (3 << 4);
 	writel(reg, &ccm_regs->CCGR3);
 
 	/* EPDC PIX clk from PFD_480M (PLL3), set to 480/3 = 160MHz */
@@ -805,8 +781,6 @@ static void setup_epdc(void)
 	panel_info.epdc_data.wv_modes.mode_gc32 = 2;
 
 	panel_info.epdc_data.epdc_timings = panel_timings;
-
-	setup_epdc_power();
 }
 
 void epdc_power_on(void)
