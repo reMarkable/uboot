@@ -32,7 +32,9 @@
 #include <usb/ehci-ci.h>
 
 #include <lcd.h>
+#ifdef CONFIG_MXC_EPDC
 #include <mxc_epdc_fb.h>
+#endif
 #include <splash.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -810,9 +812,38 @@ static struct splash_location splash_locations[] = {
 
 int splash_screen_prepare(void)
 {
+#if 0
+	if (get_battery_charge() < BATTERY_LEVEL_LOW && getenv_yesno("hasshownlowbatteryimage") != 1) {
+		printf("Battery low, showing low battery screen");
+		setenv("hasshownlowbatteryimage", "true");
+		saveenv();
+
+		setenv("splashfile", "lowbattery.bmp");
+	} else {
+		wait_for_battery_charge(BATTERY_LEVEL_LOW);
+		/*while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_LOW) {
+			if (!check_charger_status()) {
+				printf("Battery low, not charging, powering off\n");
+				snvs_poweroff();
+			}
+
+			printf("Battery low, charging, already shown splash, current charge: %d%%\n", battery_charge);
+			udelay(1000000);
+		}*/
+
+		if (getenv_yesno("hasshownlowbatteryimage") == 1) {
+			setenv("hasshownlowbatteryimage", "false");
+			saveenv();
+		}
+
+		setenv("splashfile", "splash.bmp");
+	}
+#endif
+
 	return splash_source_load(splash_locations, ARRAY_SIZE(splash_locations));
 }
 
+#ifdef CONFIG_MXC_EPDC
 vidinfo_t panel_info = {
 	.vl_col = 1872,
 	.vl_row = 1404,
@@ -964,6 +995,7 @@ void epdc_power_off(void)
 	/* Set EPD_PWR_CTL0 to low - disable EINK_VDD (3.15) */
 	/*gpio_set_value(IMX_GPIO_NR(2, 7), 0);*/
 }
+#endif
 
 /*
  * Sets up GPIO keys and checks for magic key combo
@@ -1111,7 +1143,9 @@ int board_init(void)
 		hab_rvt_failsafe(); /* This never returns, hopefully */
 	}
 
+#ifdef CONFIG_MXC_EPDC
 	setup_epdc();
+#endif
 
 #ifdef CONFIG_SYS_I2C_MXC
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
