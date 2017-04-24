@@ -8,6 +8,7 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
+#ifdef CONFIG_WAVEFORM_BUF_SIZE
 #include <common.h>
 #include <lcd.h>
 #include <linux/err.h>
@@ -116,3 +117,4 @@ int board_setup_waveform_file(ulong waveform_buf)
 
 	return 0;
 }
+#endif
