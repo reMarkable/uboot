@@ -111,6 +111,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define USB_POWER_UP		IMX_GPIO_NR(4, 6)
 
 
+#define BATTERY_LEVEL_LOW	5
+#define BATTERY_LEVEL_CRITICAL	2
+
 
 int dram_init(void)
 {
@@ -439,20 +442,48 @@ int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	return 0;
 }
 
+
+/*
+ * The percentage calculated by the fuel gauge isn't always very correct,
+ * so calculate it manually as well to be sure.
+ */
 static int get_battery_charge(void)
 {
-	int ret;
+	int ret, percent, charge_now, charge_full, charge_percent;
 	uint8_t message[2];
 
 	I2C_SET_BUS(I2C_PMIC);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_PERCENT, 1, message, sizeof(message));
 	if (ret) {
-		printf("Failed to read charge from fuel gauge\n");
+		printf("Failed to read percent charge from fuel gauge\n");
 		return -1;
 	}
 
-	return get_unaligned_le16(message);
+	percent = get_unaligned_le16(message);
+
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_CHARGE, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read percent charge from fuel gauge\n");
+		return -1;
+	}
+	charge_now = get_unaligned_le16(message);
+
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FULL_CHARGE, 1, message, sizeof(message));
+	if (ret) {
+		printf("Failed to read full charge from fuel gauge\n");
+		return -1;
+	}
+	charge_full = get_unaligned_le16(message);
+
+	charge_percent = 100 * charge_now / charge_full;
+
+
+	if (percent < charge_percent) {
+		return percent;
+	} else {
+		return charge_percent;
+	}
 }
 
 static void battery_dump(void)
@@ -554,12 +585,28 @@ int cmd_check_battery(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 U_BOOT_CMD(checkbattery, CONFIG_SYS_MAXARGS, 1, cmd_check_battery, "Check battery status", "")
 
+static void wait_for_battery_charge(int minimum)
+{
+	int battery_charge;
+
+	while ((battery_charge = get_battery_charge()) < minimum) {
+		if (!check_charger_status()) {
+			printf("Battery low, not charging, powering off\n");
+			snvs_poweroff();
+		}
+
+		printf("Battery critical, charging, current charge: %d%%, target: %d%%\n", battery_charge, minimum);
+		/* Sleep for one second */
+		udelay(1000000);
+	}
+}
+
 int power_init_board(void)
 {
 	struct pmic *p;
 	unsigned int reg;
 	u32 id;
-	int ret, battery_charge;
+	int ret;
 	unsigned char offset, i, switch_num;
 
 	/* Disable the circuitry that automatically
@@ -567,7 +614,7 @@ int power_init_board(void)
 	SETUP_IOMUX_PADS(usb_power_up_pads);
 	gpio_request(USB_POWER_UP, "usb_power_up");
 	gpio_direction_output(USB_POWER_UP, 1);
-	udelay(500000);
+	/*udelay(500000);*/
 
 	/* Set up charger */
 	SETUP_IOMUX_PADS(charger_pads);
@@ -579,16 +626,17 @@ int power_init_board(void)
 		printf("Not charging\n");
 	}
 
-	while ((battery_charge = get_battery_charge()) < 5) {
+	wait_for_battery_charge(BATTERY_LEVEL_CRITICAL);
+	/* Critical battery */
+/*	while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_CRITICAL) {
 		if (!check_charger_status()) {
 			printf("Battery critical, not charging, powering off\n");
 			snvs_poweroff();
 		}
 
-		printf("Battery low, charging, current charge: %d%%\n", battery_charge);
-		/* Sleep for one second */
+		printf("Battery critical, charging, current charge: %d%%\n", battery_charge);
 		udelay(1000000);
-	}
+	}*/
 
 	if (check_battery() < 0) {
 		printf("Error when checking battery state, powering off\n");
@@ -730,6 +778,24 @@ int board_early_init_f(void)
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
+	return 0;
+}
+
+int board_late_init(void)
+{
+	wait_for_battery_charge(BATTERY_LEVEL_LOW);
+
+	/*int battery_charge;
+	while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_LOW) {
+		if (!check_charger_status()) {
+			printf("Battery low, not charging, powering off\n");
+			snvs_poweroff();
+		}
+
+		printf("Battery low, charging, current charge: %d%%\n", battery_charge);
+		udelay(1000000);
+	}*/
+
 	return 0;
 }
 
@@ -875,9 +941,11 @@ void epdc_power_on(void)
 	if (!tries) {
 		printf("Failed to bring up display power\n");
 	}
+	printf("EPDC powered up, enabling VCOM\n");
 
 	/* Enable VCOM */
 	gpio_set_value(IMX_GPIO_NR(2, 3), 1);
+	printf("VCOM up\n");
 
 	udelay(500);
 }
