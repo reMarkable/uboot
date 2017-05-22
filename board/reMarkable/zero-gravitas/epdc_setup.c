@@ -8,12 +8,13 @@
  * SPDX-License-Identifier:	GPL-2.0+
  */
 
-#ifdef CONFIG_WAVEFORM_BUF_SIZE
 #include <common.h>
 #include <lcd.h>
 #include <linux/err.h>
 #include <linux/types.h>
 #include <malloc.h>
+
+#ifdef CONFIG_WAVEFORM_BUF_SIZE
 #include <mxc_epdc_fb.h>
 
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
