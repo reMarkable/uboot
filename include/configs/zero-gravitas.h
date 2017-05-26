@@ -61,8 +61,10 @@
 #define CONFIG_POWER_PFUZE100
 #define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
 
+#define CONFIG_BOOTCOUNT_LIMIT
+#define CONFIG_BOOTCOUNT_ENV
+
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"vcom=-1250000\0" \
 	"image=zImage\0" \
 	"console=ttymxc0\0" \
 	"initrd=0x89000000\0" \
@@ -73,35 +75,47 @@
 	"mmcpart=1\0" \
 	"splashimage=0x80000000\0" \
 	"splashpos=m,m\0" \
-	"mmcroot=/dev/mmcblk1p2 rootwait rw\0" \
+	"mmcfallbackroot=/dev/mmcblk1p3\0" \
+	"mmcroot=/dev/mmcblk1p2\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-			"root=${mmcroot} max17135:vcom=${vcom};\0" \
+			"root=${mmcroot} rootwait rw por=${por};\0" \
 	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if run loadfdt; then " \
-			"bootz ${loadaddr} - ${fdt_addr}; " \
-		"else " \
-			"echo WARN: Cannot load the DT; " \
+		"mmc dev ${mmcdev}; " \
+		"if mmc rescan; then " \
+			"if run loadimage; then " \
+				"if run loadfdt; then " \
+					"bootz ${loadaddr} - ${fdt_addr}; " \
+				"else " \
+					"echo WARN: Cannot load the DT; " \
+				"fi; " \
+			"fi; " \
 		"fi;\0" \
 	"memboot=echo Booting from memory...; " \
-		"setenv bootargs console=${console},${baudrate}" \
-			"max17135:vcom=${vcom} " \
+		"setenv bootargs console=${console},${baudrate} " \
 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
 		"g_mass_storage.iSerialNumber=\"\" rdinit=/sbin/init; "\
 		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
+	"altbootcmd=echo Running from fallback root...; " \
+		"run memboot; " \
+		"setenv bootargs console=${console},${baudrate} " \
+				"root=${mmcfallbackroot} rootwait rw;\0" \
+		"run mmcboot;\0" \
 
+/* Always try to boot from memory first, in case of USB download mode */
 #define CONFIG_BOOTCOMMAND \
 	"run memboot; " \
-	"mmc dev ${mmcdev}; " \
-	"if mmc rescan; then " \
-		"if run loadimage; then " \
-			"run mmcboot; " \
-		"fi; " \
-	"fi;" \
-	"echo WARN: unable to boot from either RAM or eMMC; "
+	"run mmcargs; " \
+	"run mmcboot; " \
+	"echo WARN: unable to boot from either RAM or eMMC;"
+
+#ifdef CONFIG_BOOTDELAY
+#undef CONFIG_BOOTDELAY
+#endif
+
+#define CONFIG_BOOTDELAY 1
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_MEMTEST_START	0x80000000
