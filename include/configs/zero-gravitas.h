@@ -126,8 +126,11 @@
 /* Environment organization */
 #define CONFIG_ENV_SIZE			SZ_8K
 
-#define CONFIG_ENV_OFFSET		(8 * SZ_64K)
-#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_ENV_IS_IN_FAT
+#define FAT_ENV_INTERFACE "mmc"
+#define FAT_ENV_DEVICE_AND_PART "1:1"
+#define CONFIG_FAT_WRITE
+#define FAT_ENV_FILE "uboot.env"
 
 #ifdef CONFIG_CMD_SF
 #define CONFIG_MXC_SPI
