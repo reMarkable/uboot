@@ -114,7 +114,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 
 #define BATTERY_LEVEL_LOW	5
-#define BATTERY_LEVEL_CRITICAL	2
+#define BATTERY_LEVEL_CRITICAL	1
 
 
 int dram_init(void)
@@ -628,22 +628,12 @@ int power_init_board(void)
 		printf("Not charging\n");
 	}
 
-	wait_for_battery_charge(BATTERY_LEVEL_CRITICAL);
-	/* Critical battery */
-/*	while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_CRITICAL) {
-		if (!check_charger_status()) {
-			printf("Battery critical, not charging, powering off\n");
-			snvs_poweroff();
-		}
-
-		printf("Battery critical, charging, current charge: %d%%\n", battery_charge);
-		udelay(1000000);
-	}*/
-
 	if (check_battery() < 0) {
 		printf("Error when checking battery state, powering off\n");
 		snvs_poweroff();
 	}
+
+	wait_for_battery_charge(BATTERY_LEVEL_CRITICAL);
 
 	ret = power_pfuze100_init(I2C_PMIC);
 	if (ret)
@@ -786,23 +776,11 @@ int board_early_init_f(void)
 int board_late_init(void)
 {
 	wait_for_battery_charge(BATTERY_LEVEL_LOW);
-
 	if (get_imx_reset_cause() == 0x00010) {
 		setenv("por", "wdog");
 	} else {
 		setenv("por", "normal");
 	}
-
-	/*int battery_charge;
-	while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_LOW) {
-		if (!check_charger_status()) {
-			printf("Battery low, not charging, powering off\n");
-			snvs_poweroff();
-		}
-
-		printf("Battery low, charging, current charge: %d%%\n", battery_charge);
-		udelay(1000000);
-	}*/
 
 	return 0;
 }
@@ -818,33 +796,11 @@ static struct splash_location splash_locations[] = {
 
 int splash_screen_prepare(void)
 {
-#if 0
-	if (get_battery_charge() < BATTERY_LEVEL_LOW && getenv_yesno("hasshownlowbatteryimage") != 1) {
-		printf("Battery low, showing low battery screen");
-		setenv("hasshownlowbatteryimage", "true");
-		saveenv();
-
+	if (get_battery_charge() < BATTERY_LEVEL_LOW) {
 		setenv("splashfile", "lowbattery.bmp");
 	} else {
-		wait_for_battery_charge(BATTERY_LEVEL_LOW);
-		/*while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_LOW) {
-			if (!check_charger_status()) {
-				printf("Battery low, not charging, powering off\n");
-				snvs_poweroff();
-			}
-
-			printf("Battery low, charging, already shown splash, current charge: %d%%\n", battery_charge);
-			udelay(1000000);
-		}*/
-
-		if (getenv_yesno("hasshownlowbatteryimage") == 1) {
-			setenv("hasshownlowbatteryimage", "false");
-			saveenv();
-		}
-
 		setenv("splashfile", "splash.bmp");
 	}
-#endif
 
 	return splash_source_load(splash_locations, ARRAY_SIZE(splash_locations));
 }
