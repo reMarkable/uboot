@@ -77,6 +77,7 @@
 	"splashpos=m,m\0" \
 	"mmcfallbackroot=/dev/mmcblk1p3\0" \
 	"mmcroot=/dev/mmcblk1p2\0" \
+	"por=undefined\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 			"root=${mmcroot} rootwait rw por=${por};\0" \
 	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \

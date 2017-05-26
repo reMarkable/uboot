@@ -787,6 +787,12 @@ int board_late_init(void)
 {
 	wait_for_battery_charge(BATTERY_LEVEL_LOW);
 
+	if (get_imx_reset_cause() == 0x00010) {
+		setenv("por", "wdog");
+	} else {
+		setenv("por", "normal");
+	}
+
 	/*int battery_charge;
 	while ((battery_charge = get_battery_charge()) < BATTERY_LEVEL_LOW) {
 		if (!check_charger_status()) {
