@@ -65,23 +65,22 @@
 #define CONFIG_BOOTCOUNT_ENV
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"image=zImage\0" \
+	"image=/boot/zImage\0" \
 	"console=ttymxc0\0" \
 	"initrd=0x89000000\0" \
-	"fdt_file=zero-gravitas.dtb\0" \
+	"fdt_file=/boot/zero-gravitas.dtb\0" \
 	"fdt_addr=0x88000000\0" \
 	"ip_dyn=yes\0" \
 	"mmcdev=1\0" \
-	"mmcpart=1\0" \
 	"splashimage=0x80000000\0" \
 	"splashpos=m,m\0" \
-	"mmcfallbackroot=/dev/mmcblk1p3\0" \
-	"mmcroot=/dev/mmcblk1p2\0" \
+	"active_partition=2\0" \
+	"fallback_partition=3\0" \
 	"por=undefined\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-			"root=${mmcroot} rootwait rw por=${por};\0" \
-	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+			"root=/dev/mmcblk1p${active_partition} rootwait rw por=${por};\0" \
+	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"mmc dev ${mmcdev}; " \
 		"if mmc rescan; then " \
@@ -97,18 +96,20 @@
 		"setenv bootargs console=${console},${baudrate} " \
 		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
 		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
-		"g_mass_storage.iSerialNumber=\"\" rdinit=/sbin/init; "\
+		"g_mass_storage.iSerialNumber=\"\" rdinit=/linuxrc; "\
 		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
 	"altbootcmd=echo Running from fallback root...; " \
 		"run memboot; " \
+		"setenv mmcpart ${fallback_partition}; " \
 		"setenv bootargs console=${console},${baudrate} " \
-				"root=${mmcfallbackroot} rootwait rw;\0" \
+				"root=root=/dev/mmcblk1p${fallback_partition} rootwait rw; " \
 		"run mmcboot;\0" \
 
 /* Always try to boot from memory first, in case of USB download mode */
 #define CONFIG_BOOTCOMMAND \
 	"run memboot; " \
 	"run mmcargs; " \
+	"setenv mmcpart ${active_partition}; " \
 	"run mmcboot; " \
 	"echo WARN: unable to boot from either RAM or eMMC;"
 
