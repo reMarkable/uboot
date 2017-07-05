@@ -99,6 +99,12 @@
 		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
 	"altbootcmd=echo Running from fallback root...; " \
 		"run memboot; " \
+		"if test ${bootcount} -gt 2; then " \
+			"echo WARN: Failed too much, turning off; " \
+			"setenv bootcount 1; " \
+			"saveenv; " \
+			"poweroff; " \
+		"fi; " \
 		"setenv mmcpart ${fallback_partition}; " \
 		"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mmcblk1p${fallback_partition} rootwait rw; " \
