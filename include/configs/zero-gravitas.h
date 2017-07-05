@@ -76,6 +76,7 @@
 	"bootlimit=1\0" \
 	"por=undefined\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+			"systemd.crash_reboot=true " \
 			"root=/dev/mmcblk1p${active_partition} rootwait rw por=${por};\0" \
 	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
