@@ -61,9 +61,6 @@
 #define CONFIG_POWER_PFUZE100
 #define CONFIG_POWER_PFUZE100_I2C_ADDR	0x08
 
-#define CONFIG_BOOTCOUNT_LIMIT
-#define CONFIG_BOOTCOUNT_ENV
-
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"image=/boot/zImage\0" \
 	"console=ttymxc0\0" \
@@ -76,6 +73,7 @@
 	"splashpos=m,m\0" \
 	"active_partition=2\0" \
 	"fallback_partition=3\0" \
+	"bootlimit=1\0" \
 	"por=undefined\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 			"root=/dev/mmcblk1p${active_partition} rootwait rw por=${por};\0" \
@@ -111,12 +109,19 @@
 	"run mmcargs; " \
 	"setenv mmcpart ${active_partition}; " \
 	"run mmcboot; " \
-	"echo WARN: unable to boot from either RAM or eMMC;"
+	"echo WARN: unable to boot from either RAM or eMMC; " \
+	"setenv upgrade_available 1; " \
+	"setenv bootcount 1; " \
+	"saveenv; " \
+	"reset; "
 
 #ifdef CONFIG_BOOTDELAY
 #undef CONFIG_BOOTDELAY
 #endif
 
+#define CONFIG_RESET_TO_RETRY
+#define CONFIG_BOOT_RETRY_TIME 90
+#define CONFIG_BOOT_RETRY_MIN  90
 #define CONFIG_BOOTDELAY 1
 
 /* Miscellaneous configurable options */
@@ -143,10 +148,17 @@
 #define CONFIG_ENV_SIZE			SZ_8K
 
 #define CONFIG_ENV_IS_IN_FAT
+/*#define CONFIG_ENV_IS_NOWHERE*/
+
+#ifdef CONFIG_ENV_IS_IN_FAT
+#define CONFIG_BOOTCOUNT_LIMIT
+#define CONFIG_BOOTCOUNT_ENV
+
 #define FAT_ENV_INTERFACE "mmc"
 #define FAT_ENV_DEVICE_AND_PART "1:1"
 #define CONFIG_FAT_WRITE
 #define FAT_ENV_FILE "uboot.env"
+#endif
 
 #ifdef CONFIG_CMD_SF
 #define CONFIG_MXC_SPI
