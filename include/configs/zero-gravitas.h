@@ -107,7 +107,9 @@
 		"fi; " \
 		"setenv mmcpart ${fallback_partition}; " \
 		"setenv bootargs console=${console},${baudrate} " \
-				"root=/dev/mmcblk1p${fallback_partition} rootwait rw; " \
+				"root=/dev/mmcblk1p${fallback_partition} rootwait rw " \
+				"systemd.log_level=debug systemd.log_target=kmsg " \
+				"log_buf_len=1M printk.devkmsg systemd.journald.forward_to_console=1; " \
 		"run mmcboot;\0" \
 
 /* Always try to boot from memory first, in case of USB download mode */
