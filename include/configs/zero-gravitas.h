@@ -102,7 +102,7 @@
 		"run memboot; " \
 		"setenv mmcpart ${fallback_partition}; " \
 		"setenv bootargs console=${console},${baudrate} " \
-				"root=root=/dev/mmcblk1p${fallback_partition} rootwait rw; " \
+				"root=/dev/mmcblk1p${fallback_partition} rootwait rw; " \
 		"run mmcboot;\0" \
 
 /* Always try to boot from memory first, in case of USB download mode */
