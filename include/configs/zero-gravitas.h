@@ -113,6 +113,9 @@
 
 /* Always try to boot from memory first, in case of USB download mode */
 #define CONFIG_BOOTCOMMAND \
+	"if test ! -e mmc 1:1 uboot.env; then " \
+		"saveenv; " \
+	"fi; " \
 	"run memboot; " \
 	"run mmcargs; " \
 	"setenv mmcpart ${active_partition}; " \
