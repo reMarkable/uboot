@@ -30,7 +30,6 @@
 #define CONFIG_SPLASH_SCREEN_ALIGN
 #define CONFIG_LCD
 #define CONFIG_CMD_BMP
-#define LCD_BPP				LCD_COLOR16
 
 /* Size of malloc() pool, needs space for EPDC working buffer */
 #define CONFIG_SYS_MALLOC_LEN		(SZ_32M)
