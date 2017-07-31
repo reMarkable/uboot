@@ -105,6 +105,17 @@ DECLARE_GLOBAL_DATA_PTR;
 #define BQ27441_FLAG_LOWCHARGE	BIT(2)
 #define BQ27441_FLAG_CRITCHARGE	BIT(1)
 
+#define BQ27441_FLAGS		0x06
+#define BQ27441_OPCONFIG_1	0x40
+#define BQ27441_OPCONFIG_2	0x41
+#define BQ27441_OPCBATLOWEN_MASK	0x04
+#define BQ27441_CONTROL_1		0x00
+#define BQ27441_CONTROL_2		0x01
+#define BQ27441_BLOCK_DATA_CHECKSUM	0x60
+#define BQ27441_BLOCK_DATA_CONTROL	0x61
+#define BQ27441_DATA_BLOCK_CLASS	0x3E
+#define BQ27441_DATA_BLOCK		0x3F
+
 #define SNVS_REG_LPCR		0x20CC038
 #define SNVS_MASK_POWEROFF	(BIT(5) | BIT(6) | BIT(0))
 
@@ -445,6 +456,82 @@ int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 }
 
 
+/**
+ * Set the BATLOWEN bit, to make sure the BQ27441 GPIO only triggers on battery
+ * low, not on every change in charge percentage.
+ */
+static void set_fuelgauge_gpio_behavior(void)
+{
+	int ret, checksum, temporary;
+	uint16_t opconfig;
+	int tries;
+
+	I2C_SET_BUS(I2C_PMIC);
+
+	/* Unseal the fuel gauge for data access */
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_1, 0x00);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_2, 0x80);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_1, 0x00);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_2, 0x80);
+
+	/* setup fuel gauge state data block block for ram access */
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_BLOCK_DATA_CONTROL, 0x00);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_DATA_BLOCK_CLASS, 0x40);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_DATA_BLOCK, 0x00);
+
+	mdelay(1);
+
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_1, 1, &opconfig, sizeof(opconfig));
+	if (ret) {
+		printf("Failed to read opconfig from fuel gauge\n");
+		return;
+	}
+
+	if (be16_to_cpu(opconfig) & BQ27441_OPCBATLOWEN_MASK) {
+		printf("BQ27441_OPCBATLOWEN_MASK already set\n");
+		return;
+	}
+
+	/* read check sum */
+	checksum = i2c_reg_read(BQ27441_I2C_ADDR, BQ27441_BLOCK_DATA_CHECKSUM);
+
+	/* place the fuel gauge into config update */
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_1, 0x13);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_2, 0x00);
+
+	tries = 0;
+	while (!(i2c_reg_read(BQ27441_I2C_ADDR, BQ27441_FLAGS) & 0x10)) {
+		udelay(1000); /* sleep 1ms */
+
+		if (tries > 10) {
+			printf("Timeout while waiting for config update\n");
+			return;
+		}
+
+		tries++;
+	}
+
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_2,
+				((opconfig >> 8) | BQ27441_OPCBATLOWEN_MASK));
+
+	temporary = (255 - checksum
+		- (opconfig & 0xFF)
+		- ((opconfig >> 8) & 0xFF)) % 256;
+
+	checksum = 255 - ((temporary
+				+ (opconfig & 0xFF)
+				+ ((opconfig >> 8) |
+				BQ27441_OPCBATLOWEN_MASK)) % 256);
+
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_BLOCK_DATA_CHECKSUM, checksum);
+
+	/* seal the fuel gauge before exit */
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_1, 0x20);
+	i2c_reg_write(BQ27441_I2C_ADDR, BQ27441_CONTROL_2, 0x00);
+
+	printf("Set fuel gauge behavior\n");
+}
+
 /*
  * The percentage calculated by the fuel gauge isn't always very correct,
  * so calculate it manually as well to be sure.
@@ -632,6 +719,8 @@ int power_init_board(void)
 		printf("Error when checking battery state, powering off\n");
 		snvs_poweroff();
 	}
+
+	set_fuelgauge_gpio_behavior();
 
 	wait_for_battery_charge(BATTERY_LEVEL_CRITICAL);
 

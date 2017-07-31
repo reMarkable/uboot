@@ -75,7 +75,7 @@
 	"bootlimit=1\0" \
 	"por=undefined\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-			"systemd.crash_reboot=true " \
+			"systemd.crash_reboot=true memtest " \
 			"root=/dev/mmcblk1p${active_partition} rootwait rw por=${por};\0" \
 	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
@@ -107,7 +107,7 @@
 		"setenv mmcpart ${fallback_partition}; " \
 		"setenv bootargs console=${console},${baudrate} " \
 				"root=/dev/mmcblk1p${fallback_partition} rootwait rw " \
-				"systemd.log_level=debug systemd.log_target=kmsg " \
+				"systemd.log_level=debug systemd.log_target=kmsg memtest " \
 				"log_buf_len=1M printk.devkmsg systemd.journald.forward_to_console=1; " \
 		"run mmcboot;\0" \
 
