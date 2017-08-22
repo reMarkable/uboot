@@ -100,7 +100,7 @@
 		"run memboot; " \
 		"if test ${bootcount} -gt 2; then " \
 			"echo WARN: Failed too much, turning off; " \
-			"setenv bootcount 1; " \
+			"setenv bootcount 0; " \
 			"saveenv; " \
 			"poweroff; " \
 		"fi; " \
