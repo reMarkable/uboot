@@ -481,7 +481,7 @@ static void set_fuelgauge_gpio_behavior(void)
 
 	mdelay(1);
 
-	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_1, 1, &opconfig, sizeof(opconfig));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_1, 1, (uint8_t*)&opconfig, sizeof(opconfig));
 	if (ret) {
 		printf("Failed to read opconfig from fuel gauge\n");
 		return;
