@@ -119,6 +119,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SNVS_REG_LPCR		0x20CC038
 #define SNVS_MASK_POWEROFF	(BIT(5) | BIT(6) | BIT(0))
 
+#define SNVS_LPSR_ADDR    0x020CC04C
+#define SNVS_LPSR_CLEAR   0xFFFFFFFF
+#define SNVS_LPPGDR_ADDR  0x020CC064
+#define SVNS_LPPGDR_CONST 0x41736166
+
 /* For the BQ24133 charger */
 #define BQ24133_CHRGR_OK	IMX_GPIO_NR(4, 1)
 #define USB_POWER_UP		IMX_GPIO_NR(4, 6)
@@ -441,6 +446,10 @@ static void pfuze100_dump(struct pmic *p)
 
 static void snvs_poweroff(void)
 {
+	/* Clear glitch detect to ensure proper poweroff */
+	writel(SVNS_LPPGDR_CONST, SNVS_LPPGDR_ADDR);
+	writel(SNVS_LPSR_CLEAR, SNVS_LPSR_ADDR);
+
 	writel(SNVS_MASK_POWEROFF, SNVS_REG_LPCR);
 	while (1) {
 		udelay(500000);
