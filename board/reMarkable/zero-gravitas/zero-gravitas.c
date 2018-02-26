@@ -623,6 +623,9 @@ static int check_battery(void)
 	int ret, flags;
 	uint8_t message[2];
 
+	int counter;
+	const int battery_poll_limit = 8;
+
 	I2C_SET_BUS(I2C_PMIC);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
@@ -650,10 +653,23 @@ static int check_battery(void)
 		printf("Battery fastcharge available\n");
 	}
 
+	counter = 0;
+	while ( (flags & BQ27441_FLAG_CRITCHARGE) && (counter++ < battery_poll_limit) ) {
+		mdelay(500);
+		ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
+		if (ret) {
+			printf("BQ27441 battery flags read failure\n");
+			return -1;
+		}
+		flags = get_unaligned_le16(message);
+		printf("BQ27441 battery flags: %04x\n", flags);
+	}
 	if (flags & BQ27441_FLAG_CRITCHARGE) {
 		printf("Battery critically low, powering off\n");
 		return -1;
-	} else if (flags & BQ27441_FLAG_LOWCHARGE) {
+	}
+
+	if (flags & BQ27441_FLAG_LOWCHARGE) {
 		printf("Battery low charge\n");
 	} else if (flags & BQ27441_FLAG_FULLCHARGE) {
 		printf("Battery full charge\n");
