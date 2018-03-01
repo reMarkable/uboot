@@ -800,16 +800,48 @@ int power_init_board(void)
 	reg |= SW1xCONF_DVSSPEED_4US;
 	pmic_reg_write(p, PFUZE100_SW1CCONF, reg);
 
-	/* Set 3V3_SW4 voltage to 3.3V */
+	/* Set 3V3_SW2 voltage to 3.1V */
+	pmic_reg_read(p, PFUZE100_SW2VOL, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2VOL, reg);
+
+	pmic_reg_read(p, PFUZE100_SW2STBY, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2STBY, reg);
+
+	pmic_reg_read(p, PFUZE100_SW2OFF, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2OFF, reg);
+
+	/* Set 3V3_SW4 voltage to 3.1V */
 	pmic_reg_read(p, PFUZE100_SW4VOL, &reg);
 	reg &= ~SW4_VOL_MASK;
-	reg |= SW4_3_300V;
+	reg |= SW4_3_10V;
 	pmic_reg_write(p, PFUZE100_SW4VOL, reg);
 
-	/* Set 3V3_VGEN6 voltage to 3.3V */
+	pmic_reg_read(p, PFUZE100_SW4STBY, &reg);
+	reg &= ~SW4_VOL_MASK;
+	reg |= SW4_3_10V;
+	pmic_reg_write(p, PFUZE100_SW4STBY, reg);
+
+	pmic_reg_read(p, PFUZE100_SW4OFF, &reg);
+	reg &= ~SW4_VOL_MASK;
+	reg |= SW4_3_10V;
+	pmic_reg_write(p, PFUZE100_SW4OFF, reg);
+
+	/* Set 3V3_VGEN5 voltage to 3.1V */
+	pmic_reg_read(p, PFUZE100_VGEN5VOL, &reg);
+	reg &= ~LDO_VOL_MASK;
+	reg |= LDOB_3_10V;
+	pmic_reg_write(p, PFUZE100_VGEN5VOL, reg);
+
+	/* Set 3V3_VGEN6 voltage to 3.1V */
 	pmic_reg_read(p, PFUZE100_VGEN6VOL, &reg);
 	reg &= ~LDO_VOL_MASK;
-	reg |= LDOB_3_30V;
+	reg |= LDOB_3_10V;
 	pmic_reg_write(p, PFUZE100_VGEN6VOL, reg);
 
 	/* Set modes */
