@@ -119,6 +119,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SNVS_REG_LPCR		0x20CC038
 #define SNVS_MASK_POWEROFF	(BIT(5) | BIT(6) | BIT(0))
 
+#define SNVS_LPSR_ADDR    0x020CC04C
+#define SNVS_LPSR_CLEAR   0xFFFFFFFF
+#define SNVS_LPPGDR_ADDR  0x020CC064
+#define SVNS_LPPGDR_CONST 0x41736166
+
 /* For the BQ24133 charger */
 #define BQ24133_CHRGR_OK	IMX_GPIO_NR(4, 1)
 #define USB_POWER_UP		IMX_GPIO_NR(4, 6)
@@ -441,6 +446,10 @@ static void pfuze100_dump(struct pmic *p)
 
 static void snvs_poweroff(void)
 {
+	/* Clear glitch detect to ensure proper poweroff */
+	writel(SVNS_LPPGDR_CONST, SNVS_LPPGDR_ADDR);
+	writel(SNVS_LPSR_CLEAR, SNVS_LPSR_ADDR);
+
 	writel(SNVS_MASK_POWEROFF, SNVS_REG_LPCR);
 	while (1) {
 		udelay(500000);
@@ -481,7 +490,7 @@ static void set_fuelgauge_gpio_behavior(void)
 
 	mdelay(1);
 
-	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_1, 1, &opconfig, sizeof(opconfig));
+	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_OPCONFIG_1, 1, (uint8_t*)&opconfig, sizeof(opconfig));
 	if (ret) {
 		printf("Failed to read opconfig from fuel gauge\n");
 		return;
@@ -614,6 +623,9 @@ static int check_battery(void)
 	int ret, flags;
 	uint8_t message[2];
 
+	int counter;
+	const int battery_poll_limit = 8;
+
 	I2C_SET_BUS(I2C_PMIC);
 
 	ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
@@ -641,10 +653,23 @@ static int check_battery(void)
 		printf("Battery fastcharge available\n");
 	}
 
+	counter = 0;
+	while ( (flags & BQ27441_FLAG_CRITCHARGE) && (counter++ < battery_poll_limit) ) {
+		mdelay(500);
+		ret = i2c_read(BQ27441_I2C_ADDR, BQ27441_REG_FLAGS, 1, message, sizeof(message));
+		if (ret) {
+			printf("BQ27441 battery flags read failure\n");
+			return -1;
+		}
+		flags = get_unaligned_le16(message);
+		printf("BQ27441 battery flags: %04x\n", flags);
+	}
 	if (flags & BQ27441_FLAG_CRITCHARGE) {
 		printf("Battery critically low, powering off\n");
 		return -1;
-	} else if (flags & BQ27441_FLAG_LOWCHARGE) {
+	}
+
+	if (flags & BQ27441_FLAG_LOWCHARGE) {
 		printf("Battery low charge\n");
 	} else if (flags & BQ27441_FLAG_FULLCHARGE) {
 		printf("Battery full charge\n");
@@ -775,16 +800,48 @@ int power_init_board(void)
 	reg |= SW1xCONF_DVSSPEED_4US;
 	pmic_reg_write(p, PFUZE100_SW1CCONF, reg);
 
-	/* Set 3V3_SW4 voltage to 3.3V */
+	/* Set 3V3_SW2 voltage to 3.1V */
+	pmic_reg_read(p, PFUZE100_SW2VOL, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2VOL, reg);
+
+	pmic_reg_read(p, PFUZE100_SW2STBY, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2STBY, reg);
+
+	pmic_reg_read(p, PFUZE100_SW2OFF, &reg);
+	reg &= ~SW2_VOL_MASK;
+	reg |= SW2_3_10V;
+	pmic_reg_write(p, PFUZE100_SW2OFF, reg);
+
+	/* Set 3V3_SW4 voltage to 3.1V */
 	pmic_reg_read(p, PFUZE100_SW4VOL, &reg);
 	reg &= ~SW4_VOL_MASK;
-	reg |= SW4_3_300V;
+	reg |= SW4_3_10V;
 	pmic_reg_write(p, PFUZE100_SW4VOL, reg);
 
-	/* Set 3V3_VGEN6 voltage to 3.3V */
+	pmic_reg_read(p, PFUZE100_SW4STBY, &reg);
+	reg &= ~SW4_VOL_MASK;
+	reg |= SW4_3_10V;
+	pmic_reg_write(p, PFUZE100_SW4STBY, reg);
+
+	pmic_reg_read(p, PFUZE100_SW4OFF, &reg);
+	reg &= ~SW4_VOL_MASK;
+	reg |= SW4_3_10V;
+	pmic_reg_write(p, PFUZE100_SW4OFF, reg);
+
+	/* Set 3V3_VGEN5 voltage to 3.1V */
+	pmic_reg_read(p, PFUZE100_VGEN5VOL, &reg);
+	reg &= ~LDO_VOL_MASK;
+	reg |= LDOB_3_10V;
+	pmic_reg_write(p, PFUZE100_VGEN5VOL, reg);
+
+	/* Set 3V3_VGEN6 voltage to 3.1V */
 	pmic_reg_read(p, PFUZE100_VGEN6VOL, &reg);
 	reg &= ~LDO_VOL_MASK;
-	reg |= LDOB_3_30V;
+	reg |= LDOB_3_10V;
 	pmic_reg_write(p, PFUZE100_VGEN6VOL, reg);
 
 	/* Set modes */
