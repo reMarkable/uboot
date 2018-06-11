@@ -132,7 +132,6 @@
 #define CONFIG_RESET_TO_RETRY
 #define CONFIG_BOOT_RETRY_TIME 90
 #define CONFIG_BOOT_RETRY_MIN  90
-#define CONFIG_BOOTDELAY 0
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_MEMTEST_START	0x80000000
@@ -197,5 +196,13 @@
 #endif
 
 #define CONFIG_IMX_THERMAL
+
+/* DEBUG TWEAKS */
+#define CONFIG_BOOTDELAY 1
+
+#ifndef DEBUG
+#define DEBUG
+#endif
+
 
 #endif				/* __ZERO_GRAVITAS_H */
