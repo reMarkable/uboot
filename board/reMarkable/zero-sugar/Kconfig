@@ -1,0 +1,14 @@
+if TARGET_ZERO_SUGAR
+
+config SYS_BOARD
+	default "zero-sugar"
+
+config SYS_VENDOR
+	default "reMarkable"
+
+config SYS_CONFIG_NAME
+	default "zero-sugar"
+
+config SYS_TEXT_BASE
+	default 0x87800000
+endif

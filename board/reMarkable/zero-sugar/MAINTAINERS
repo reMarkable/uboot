@@ -1,0 +1,6 @@
+ZERO-SUGAR BOARD
+M:	Lars Miljeteig <lars.ivar.miljeteig@remarkable.com>
+S:	Maintained
+F:	board/remarkable/zero-sugar/
+F:	include/configs/zero-sugar.h
+F:	configs/zero-sugar_defconfig

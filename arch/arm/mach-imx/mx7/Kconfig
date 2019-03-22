@@ -97,6 +97,13 @@ config TARGET_COLIBRI_IMX7
 	select DM_SERIAL
 	select DM_THERMAL
 
+config TARGET_ZERO_SUGAR
+	bool "reMarkable 2"
+	select BOARD_LATE_INIT
+	select MX7D	
+	select DM
+	select DM_THERMAL
+
 endchoice
 
 config SYS_SOC
@@ -112,5 +119,6 @@ source "board/freescale/multa-imx7d/Kconfig"
 source "board/technexion/pico-imx7d/Kconfig"
 source "board/toradex/colibri_imx7/Kconfig"
 source "board/warp7/Kconfig"
+source "board/reMarkable/zero-sugar/Kconfig"
 
 endif
