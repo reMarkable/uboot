@@ -212,7 +212,7 @@
 		"fi;\0" \
 		"findfdt="\
 			"if test $fdt_file = undefined; then " \
-				"setenv fdt_file imx7d-sdb.dtb; " \
+				"setenv fdt_file imx7-test-image_stripped.dtb; " \
 			"fi;\0" \
 
 #define CONFIG_BOOTCOMMAND \
