@@ -28,6 +28,8 @@
 #include <i2c.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/arch/crm_regs.h>
+#include <command.h>
+#include <dm/uclass.h>
 
 #include <asm/mach-imx/video.h>
 
@@ -280,6 +282,66 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 #endif
+
+#define SY7636A_I2C_BUS 2
+#define SY7636A_I2C_ADDR 0x62
+
+#define SY7636A_REG_OPERATIONMODE 0x00
+#define SY7636A_OPERATIONMODE_ONOFF 0x80
+#define SY7636A_OPERATIONMODE_VCOMCTRL 0x40
+
+static int sy7636a_i2c_reg_write(struct udevice *dev, uint addr, uint mask, uint data)
+{
+	uint8_t valb;
+	int ret;
+
+	if (mask != 0xff) {
+		ret = dm_i2c_read(dev, addr, &valb, 1);
+		if (ret)
+			return ret;
+
+		valb &= ~mask;
+		valb |= data;
+	} else {
+		valb = data;
+	}
+
+	ret = dm_i2c_write(dev, addr, &valb, 1);
+	return ret;
+}
+
+static int do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	struct udevice *bus, *dev;
+
+	int ret;
+	u8 mask, val;
+
+	ret = uclass_get_device_by_seq(UCLASS_I2C, SY7636A_I2C_BUS, &bus);
+	if (ret) {
+		printf("%s: No bus %d\n", __func__, SY7636A_I2C_BUS);
+		return -1;
+	}
+
+	ret = dm_i2c_probe(bus, SY7636A_I2C_ADDR, 0, &dev);
+	if (ret) {
+		printf("%s: Can't find device id=0x%x, on bus %d\n",
+			__func__, SY7636A_I2C_ADDR, SY7636A_I2C_BUS);
+		return -1;
+	}
+
+	/* Power on, include VCOM */
+	mask = (SY7636A_OPERATIONMODE_ONOFF | SY7636A_OPERATIONMODE_VCOMCTRL);
+	val = SY7636A_OPERATIONMODE_ONOFF;
+
+	return sy7636a_i2c_reg_write(dev, SY7636A_REG_OPERATIONMODE, mask, val);
+}
+
+U_BOOT_CMD(
+	epd_power_on,	1,	1,	do_epd_power_on,
+	"Turn on power for eInk Display",
+	""
+);
 
 int board_early_init_f(void)
 {
