@@ -439,40 +439,32 @@ static const struct boot_mode board_boot_modes[] = {
 };
 #endif
 
-#ifdef CONFIG_DM_PMIC
-int power_init_board(void)
+static void power_perfs(void)
 {
-	struct udevice *dev;
-	int ret, dev_id, rev_id;
-	u32 sw3mode;
+	printk("Powering up peripherals\n");
 
-	ret = pmic_get("pfuze3000", &dev);
-	if (ret == -ENODEV)
-		return 0;
-	if (ret != 0)
-		return ret;
-
-	dev_id = pmic_reg_read(dev, PFUZE3000_DEVICEID);
-	rev_id = pmic_reg_read(dev, PFUZE3000_REVID);
-	printf("PMIC: PFUZE3000 DEV_ID=0x%x REV_ID=0x%x\n", dev_id, rev_id);
-
-	pmic_clrsetbits(dev, PFUZE3000_LDOGCTL, 0, 1);
-
-	/*
-	 * Set the voltage of VLDO4 output to 2.8V which feeds
-	 * the MIPI DSI and MIPI CSI inputs.
-	 */
-	pmic_clrsetbits(dev, PFUZE3000_VLD4CTL, 0xF, 0xA);
+	/* WIFI */
+	gpio_request(IMX_GPIO_NR(6, 13), "WIFI_PWR_EN");
+	gpio_direction_output(IMX_GPIO_NR(6, 13) , 1);
+	udelay(500);
 	
-	/* change sw3 mode to avoid DDR power off */
-	sw3mode = pmic_reg_read(dev, PFUZE3000_SW3MODE);
-	ret = pmic_reg_write(dev, PFUZE3000_SW3MODE, sw3mode | 0x20);
-	if (ret < 0)
-		printf("PMIC: PFUZE3000 change sw3 mode failed\n");
+	/* DIGITIZER */
+	gpio_request(IMX_GPIO_NR(1, 1), "DIGITIZER_INT");
+	gpio_direction_input(IMX_GPIO_NR(1, 1));
+	gpio_request(IMX_GPIO_NR(1, 6), "DIGITIZER_PWR_EN");
+	gpio_direction_output(IMX_GPIO_NR(1, 6), 1);
+	udelay(500);
 
-	return 0;
+	/* EPD */
+	gpio_request(IMX_GPIO_NR(4, 22), "EPD_PMIC_I2C_PULLUP");
+	gpio_direction_output(IMX_GPIO_NR(4, 22), 1);
+	gpio_request(IMX_GPIO_NR(7, 10), "PMIC_LDO4VEN");
+	gpio_direction_output(IMX_GPIO_NR(7, 10), 1);
+	gpio_request(IMX_GPIO_NR(7, 11), "EPD_PMIC_POWERUP");
+	gpio_direction_output(IMX_GPIO_NR(7, 11), 1);
+	do_epd_power_on(NULL, 0, 0, NULL);
+	udelay(500);
 }
-#endif
 
 int board_late_init(void)
 {
@@ -493,6 +485,8 @@ int board_late_init(void)
 	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 
 	set_wdog_reset(wdog);
+
+	power_perfs();
 
 	return 0;
 }
