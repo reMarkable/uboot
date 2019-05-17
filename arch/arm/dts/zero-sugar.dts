@@ -168,8 +168,8 @@
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c4>;
 	pinctrl-1 = <&pinctrl_i2c4_gpio>;
-	scl-gpios = <&gpio6 14 GPIO_ACTIVE_HIGH>;
-	sda-gpios = <&gpio6 15 GPIO_ACTIVE_HIGH>;
+	scl-gpios = <&gpio4 14 GPIO_ACTIVE_HIGH>;
+	sda-gpios = <&gpio4 15 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -408,8 +408,8 @@
 
 		pinctrl_i2c4_gpio: i2c4grp_gpio {
 			fsl,pins = <
-				MX7D_PAD_SAI1_RX_BCLK__GPIO6_IO17		0x7f
-				MX7D_PAD_SAI1_RX_SYNC__GPIO6_IO16		0x7f
+				MX7D_PAD_I2C4_SDA__GPIO4_IO15		0x7f
+				MX7D_PAD_I2C4_SCL__GPIO4_IO14		0x7f
 			>;
 		};
 
