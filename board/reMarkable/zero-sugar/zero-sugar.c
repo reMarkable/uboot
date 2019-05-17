@@ -283,7 +283,7 @@ int board_phy_config(struct phy_device *phydev)
 }
 #endif
 
-#define SY7636A_I2C_BUS 2
+#define SY7636A_I2C_BUS 3
 #define SY7636A_I2C_ADDR 0x62
 
 #define SY7636A_REG_OPERATIONMODE 0x00
