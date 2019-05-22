@@ -13,20 +13,25 @@
 #endif
 
 #define CONFIG_MFG_ENV_SETTINGS_DEFAULT \
-	"mfgtool_args=setenv bootargs console=${console},${baudrate} " \
-		"rdinit=/linuxrc " \
-		"clk_ignore_unused "\
-		"\0" \
-	"kboot="MFG_BOOT_CMD"\0"\
-	"bootcmd_mfg=run mfgtool_args;" \
-        "if iminfo ${initrd_addr}; then " \
-            "if test ${tee} = yes; then " \
-                "bootm ${tee_addr} ${initrd_addr} ${fdt_addr}; " \
-            "else " \
-                MFG_BOOT_CMD "${loadaddr} ${initrd_addr} ${fdt_addr}; " \
-            "fi; " \
-        "else " \
-            "echo \"Run fastboot ...\"; fastboot 0; "  \
-        "fi;\0" \
+	"mfgtool_args=setenv bootargs console=${console},${baudrate} rootwait rw root=/dev/mmcblk2p2\0" \
+	"bootcmd_mfg=" \
+	 "run mfgtool_args;" \
+	 "setenv loadaddr 0x82000000;" \
+	 "setenv fdt_file zero-sugar.dtb;" \
+	 "setenv fdt_addr 0x88000000;" \ 
+	 "setenv mmcdev 1;" \
+	 "setenv mmcpart 1;" \
+	 "run loadimage;" \
+	 "run loadfdt;" \
+	 "gpio input 1;" \
+	 "gpio set 118;" \
+	 "gpio set 202;" \
+	 "gpio set 203;" \
+	 "gpio set 6;" \
+	 "epd_power_on;" \
+	 "setenv vcom 1770;" \
+	 "epd_power_on;" \
+	 "bootz 0x82000000 - 0x88000000;" \
+	"\0" \
 
 #endif
