@@ -163,6 +163,15 @@
 	"loadtee=fatload mmc ${mmcdev}:${mmcpart} ${tee_addr} ${tee_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
+        "gpio input 1;" \
+        "gpio set 11;" \
+        "gpio set 118;" \
+        "gpio set 202;" \
+        "gpio set 203;" \
+        "gpio set 6;" \
+        "epd_power_on;" \
+        "setenv vcom 1770;" \
+        "epd_power_on;" \
 		"if test ${tee} = yes; then " \
 			"run loadfdt; run loadtee; bootm ${tee_addr} - ${fdt_addr}; " \
 		"else " \
