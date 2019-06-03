@@ -466,6 +466,18 @@ static void power_perfs(void)
 	udelay(500);
 }
 
+static void config_32K_wifi_clk(void)
+{
+    /* Set 32K clock source for the CLKO2 clock */
+    printf("Setting IPP_D0_CLKO2 to get input from OSC_32K_CLK..\n");
+    clock_set_src(IPP_DO_CLKO2, OSC_32K_CLK);
+}
+U_BOOT_CMD(
+	32K_wifi_clk_on, 1,	1, config_32K_wifi_clk,
+	"Turn on 32K clock for external wifi module",
+	"Turn on the 32K clock which is required for the external wifi module to run"
+);
+
 int board_late_init(void)
 {
 	struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
