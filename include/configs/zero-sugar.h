@@ -148,7 +148,7 @@
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
 	"panel=TFT43AB\0" \
-	"mmcdev=1\0" \
+	"mmcdev=0\0" \
 	"mmcpart=1\0" \
 	"mmcroot=/dev/mmcblk2p2 rootwait rw\0" \
 	"mmcautodetect=yes\0" \
@@ -258,23 +258,18 @@
 #define CONFIG_SYS_INIT_SP_ADDR \
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 
-/* environment organization */
-#define CONFIG_ENV_SIZE			SZ_8K
+/* Environment organization */
+#define CONFIG_ENV_SIZE                 SZ_8K
+#define CONFIG_ENV_IS_IN_FAT
 
-#if defined(CONFIG_ENV_IS_IN_MMC)
-#define CONFIG_ENV_OFFSET		(14 * SZ_64K)
-#elif defined(CONFIG_ENV_IS_IN_SPI_FLASH)
-#define CONFIG_ENV_OFFSET		(896 * 1024)
-#define CONFIG_ENV_SECT_SIZE		(64 * 1024)
-#define CONFIG_ENV_SPI_BUS		CONFIG_SF_DEFAULT_BUS
-#define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
-#define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
-#define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
-#elif defined(CONFIG_ENV_IS_IN_NAND)
-#undef CONFIG_ENV_SIZE
-#define CONFIG_ENV_OFFSET		(60 << 20)
-#define CONFIG_ENV_SECT_SIZE		(128 << 10)
-#define CONFIG_ENV_SIZE			CONFIG_ENV_SECT_SIZE
+#ifdef CONFIG_ENV_IS_IN_FAT
+#define CONFIG_BOOTCOUNT_LIMIT
+#define CONFIG_BOOTCOUNT_ENV
+
+#define FAT_ENV_INTERFACE "mmc"
+#define FAT_ENV_DEVICE_AND_PART "0:1"
+#define CONFIG_FAT_WRITE
+#define FAT_ENV_FILE "uboot.env"
 #endif
 
 #ifdef CONFIG_FSL_QSPI
@@ -282,6 +277,7 @@
 #else
 #define CONFIG_SYS_AUXCORE_BOOTDATA 0x7F8000 /* Set to TCML address */
 #endif
+
 /*
  * If want to use nand, define CONFIG_CMD_NAND and rework board
  * to support nand, since emmc has pin conflicts with nand

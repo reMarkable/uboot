@@ -19,7 +19,7 @@
 	 "setenv loadaddr 0x82000000;" \
 	 "setenv fdt_file zero-sugar.dtb;" \
 	 "setenv fdt_addr 0x88000000;" \ 
-	 "setenv mmcdev 1;" \
+	 "setenv mmcdev 0;" \
 	 "setenv mmcpart 1;" \
 	 "run loadimage;" \
 	 "run loadfdt;" \
