@@ -447,7 +447,7 @@ static void power_perfs(void)
 	gpio_request(IMX_GPIO_NR(6, 13), "WIFI_PWR_EN");
 	gpio_direction_output(IMX_GPIO_NR(6, 13) , 1);
 	udelay(500);
-	
+
 	/* DIGITIZER */
 	gpio_request(IMX_GPIO_NR(1, 1), "DIGITIZER_INT");
 	gpio_direction_input(IMX_GPIO_NR(1, 1));
@@ -499,6 +499,8 @@ int board_late_init(void)
 	set_wdog_reset(wdog);
 
 	power_perfs();
+
+	config_32K_wifi_clk();
 
 	return 0;
 }
