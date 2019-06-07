@@ -194,17 +194,21 @@
 };
 
 &usdhc2 {
+    status = "disabled";
+};
+
+&usdhc2 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_wifi &pinctrl_usdhc2>;
-	pinctrl-1 = <&pinctrl_wifi &pinctrl_usdhc2_100mhz>;
-	pinctrl-2 = <&pinctrl_wifi &pinctrl_usdhc2_200mhz>;
+	/*pinctrl-1 = <&pinctrl_wifi &pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_wifi &pinctrl_usdhc2_200mhz>;*/
 	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	non-removable;
 	cd-post;
 	pm-ignore-notify;
 	wifi-host;
-	status = "disabled";
+	status = "okay";
 };
 
 &usdhc3 {
@@ -227,13 +231,14 @@
 
 &iomuxc {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wifi>;
 
 	imx7d-sdb {
 		pinctrl_wifi: wifigrp {
 			fsl,pins = <
-				MX7D_PAD_SD1_WP__CCM_CLKO2	    0x00000014
-			>;
+				MX7D_PAD_SD1_WP__CCM_CLKO2		0x00000014      /* 32K wifi clock */
+				MX7D_PAD_SD2_CD_B__GPIO5_IO9	0x00000014		/* WiFi Reg On */
+				MX7D_PAD_GPIO1_IO08__GPIO1_IO8	0x00000014		/* WiFi Host Wake */
+            >;
 		};
 
 		pinctrl_i2c1: i2c1grp {
