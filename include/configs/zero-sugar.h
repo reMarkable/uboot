@@ -260,16 +260,10 @@
 
 /* Environment organization */
 #define CONFIG_ENV_SIZE                 SZ_8K
-#define CONFIG_ENV_IS_IN_FAT
 
 #ifdef CONFIG_ENV_IS_IN_FAT
 #define CONFIG_BOOTCOUNT_LIMIT
 #define CONFIG_BOOTCOUNT_ENV
-
-#define FAT_ENV_INTERFACE "mmc"
-#define FAT_ENV_DEVICE_AND_PART "0:1"
-#define CONFIG_FAT_WRITE
-#define FAT_ENV_FILE "uboot.env"
 #endif
 
 #ifdef CONFIG_FSL_QSPI

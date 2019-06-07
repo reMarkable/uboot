@@ -8,6 +8,12 @@
  *
  */
 
+#include "wifi_init.h"
+#include "uart_init.h"
+#include "lcd_init.h"
+#include "epd_init.h"
+#include "digitizer_init.h"
+
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/mx7-pins.h>
@@ -23,8 +29,6 @@
 #include <miiphy.h>
 #include <netdev.h>
 #include <power/pmic.h>
-#include <power/pfuze3000_pmic.h>
-#include "../../freescale/common/pfuze.h"
 #include <i2c.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/arch/crm_regs.h>
@@ -33,27 +37,7 @@
 
 #include <asm/mach-imx/video.h>
 
-#ifdef CONFIG_FSL_FASTBOOT
-#include <fsl_fastboot.h>
-#ifdef CONFIG_ANDROID_RECOVERY
-#include <recovery.h>
-#endif
-#endif /*CONFIG_FSL_FASTBOOT*/
-
 DECLARE_GLOBAL_DATA_PTR;
-
-#define UART_PAD_CTRL  (PAD_CTL_DSE_3P3V_49OHM | \
-	PAD_CTL_PUS_PU100KOHM | PAD_CTL_HYS)
-
-#define ENET_PAD_CTRL  (PAD_CTL_PUS_PU100KOHM | PAD_CTL_DSE_3P3V_49OHM)
-#define ENET_PAD_CTRL_MII  (PAD_CTL_DSE_3P3V_32OHM)
-
-#define ENET_RX_PAD_CTRL  (PAD_CTL_PUS_PU100KOHM | PAD_CTL_DSE_3P3V_49OHM)
-
-#define LCD_PAD_CTRL    (PAD_CTL_HYS | PAD_CTL_PUS_PU100KOHM | \
-	PAD_CTL_DSE_3P3V_49OHM)
-
-#define BUTTON_PAD_CTRL    (PAD_CTL_PUS_PU5KOHM | PAD_CTL_DSE_3P3V_98OHM)
 
 int dram_init(void)
 {
@@ -66,348 +50,24 @@ static iomux_v3_cfg_t const wdog_pads[] = {
 	MX7D_PAD_GPIO1_IO00__WDOG1_WDOG_B | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-static iomux_v3_cfg_t const uart1_pads[] = {
-	MX7D_PAD_UART1_TX_DATA__UART1_DCE_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX7D_PAD_UART1_RX_DATA__UART1_DCE_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
-};
-
-#define BOARD_REV_C  0x300
-#define BOARD_REV_B  0x200
-#define BOARD_REV_A  0x100
-
-static int mx7sabre_rev(void)
+static void power_perfs(void)
 {
-	/*
-	 * Get Board ID information from OCOTP_GP1[15:8]
-	 * i.MX7D SDB RevA: 0x41
-	 * i.MX7D SDB RevB: 0x42
-	 */
-	struct ocotp_regs *ocotp = (struct ocotp_regs *)OCOTP_BASE_ADDR;
-	struct fuse_bank *bank = &ocotp->bank[14];
-	int reg = readl(&bank->fuse_regs[0]);
-	int ret;
+	printk("Powering up peripherals\n");
 
-	if (reg != 0) {
-		switch (reg >> 8 & 0x0F) {
-		case 0x3:
-			ret = BOARD_REV_C;
-			break;
-		case 0x02:
-			ret = BOARD_REV_B;
-			break;
-		case 0x01:
-		default:
-			ret = BOARD_REV_A;
-			break;
-		}
-	} else {
-		/* If the gp1 fuse is not burn, we have to use TO rev for the board rev */
-		if (is_soc_rev(CHIP_REV_1_0))
-			ret = BOARD_REV_A;
-		else if (is_soc_rev(CHIP_REV_1_1))
-			ret = BOARD_REV_B;
-		else
-			ret = BOARD_REV_C;
-	}
-
-	return ret;
-}
-
-u32 get_board_rev(void)
-{
-	int rev = mx7sabre_rev();
-
-	return (get_cpu_rev() & ~(0xF << 8)) | rev;
-}
-
-#ifdef CONFIG_VIDEO_MXS
-static iomux_v3_cfg_t const lcd_pads[] = {
-	MX7D_PAD_LCD_CLK__LCD_CLK | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_ENABLE__LCD_ENABLE | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_HSYNC__LCD_HSYNC | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_VSYNC__LCD_VSYNC | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA00__LCD_DATA0 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA01__LCD_DATA1 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA02__LCD_DATA2 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA03__LCD_DATA3 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA04__LCD_DATA4 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA05__LCD_DATA5 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA06__LCD_DATA6 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA07__LCD_DATA7 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA08__LCD_DATA8 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA09__LCD_DATA9 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA10__LCD_DATA10 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA11__LCD_DATA11 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA12__LCD_DATA12 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA13__LCD_DATA13 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA14__LCD_DATA14 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA15__LCD_DATA15 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA16__LCD_DATA16 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA17__LCD_DATA17 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA18__LCD_DATA18 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA19__LCD_DATA19 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA20__LCD_DATA20 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA21__LCD_DATA21 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA22__LCD_DATA22 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-	MX7D_PAD_LCD_DATA23__LCD_DATA23 | MUX_PAD_CTRL(LCD_PAD_CTRL),
-
-	MX7D_PAD_LCD_RESET__GPIO3_IO4	| MUX_PAD_CTRL(LCD_PAD_CTRL),
-};
-
-static iomux_v3_cfg_t const pwm_pads[] = {
-	/* Use GPIO for Brightness adjustment, duty cycle = period */
-	MX7D_PAD_GPIO1_IO01__GPIO1_IO1 | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
-void do_enable_parallel_lcd(struct display_info_t const *dev)
-{
-	imx_iomux_v3_setup_multiple_pads(lcd_pads, ARRAY_SIZE(lcd_pads));
-
-	imx_iomux_v3_setup_multiple_pads(pwm_pads, ARRAY_SIZE(pwm_pads));
-}
-
-struct display_info_t const displays[] = {{
-	.bus = ELCDIF1_IPS_BASE_ADDR,
-	.addr = 0,
-	.pixfmt = 24,
-	.detect = NULL,
-	.enable	= do_enable_parallel_lcd,
-	.mode	= {
-		.name			= "TFT43AB",
-		.xres           = 480,
-		.yres           = 272,
-		.pixclock       = 108695,
-		.left_margin    = 8,
-		.right_margin   = 4,
-		.upper_margin   = 2,
-		.lower_margin   = 4,
-		.hsync_len      = 41,
-		.vsync_len      = 10,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED
-} } };
-size_t display_count = ARRAY_SIZE(displays);
-#endif
-
-
-static void setup_iomux_uart(void)
-{
-	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
-}
-
-int board_mmc_get_env_dev(int devno)
-{
-	if (devno == 2)
-		devno--;
-
-	return devno;
-}
-
-int mmc_map_to_kernel_blk(int dev_no)
-{
-	if (dev_no == 1)
-		dev_no++;
-
-	return dev_no;
-}
-
-#ifdef CONFIG_FEC_MXC
-static int setup_fec(int fec_id)
-{
-	struct iomuxc_gpr_base_regs *const iomuxc_gpr_regs
-		= (struct iomuxc_gpr_base_regs *) IOMUXC_GPR_BASE_ADDR;
-
-	int ret;
-	unsigned int gpio;
-
-	ret = gpio_lookup_name("gpio_spi@0_5", NULL, NULL, &gpio);
-	if (ret) {
-		printf("GPIO: 'gpio_spi@0_5' not found\n");
-		return -ENODEV;
-	}
-
-	ret = gpio_request(gpio, "enet_phy_rst");
-	if (ret && ret != -EBUSY) {
-		printf("gpio: requesting pin %u failed\n", gpio);
-		return ret;
-	}
-
-	gpio_direction_output(gpio, 0);
+	/* WIFI */
+    zs_do_setup_32K_wifi_clk();
+    zs_do_config_wifi_powerctrl_pins();
 	udelay(500);
-	gpio_direction_output(gpio, 1);
 
-	if (0 == fec_id) {
-		/* Use 125M anatop REF_CLK1 for ENET1, clear gpr1[13], gpr1[17]*/
-		clrsetbits_le32(&iomuxc_gpr_regs->gpr[1],
-			(IOMUXC_GPR_GPR1_GPR_ENET1_TX_CLK_SEL_MASK |
-			 IOMUXC_GPR_GPR1_GPR_ENET1_CLK_DIR_MASK), 0);
-	} else {
-		/* Use 125M anatop REF_CLK2 for ENET2, clear gpr1[14], gpr1[18]*/
-		clrsetbits_le32(&iomuxc_gpr_regs->gpr[1],
-			(IOMUXC_GPR_GPR1_GPR_ENET2_TX_CLK_SEL_MASK |
-			 IOMUXC_GPR_GPR1_GPR_ENET2_CLK_DIR_MASK), 0);
+	/* DIGITIZER */
+    zs_do_config_digitizer_powerctrl_pins();
+	udelay(500);
 
-		if (mx7sabre_rev() >= BOARD_REV_B) {
-			/*  On RevB, GPIO1_IO04 is used for ENET2 EN,
-			*  so set its output to low to enable ENET2 signals
-			*/
-			gpio_request(IMX_GPIO_NR(1, 4), "fec2_en");
-			gpio_direction_output(IMX_GPIO_NR(1, 4), 0);
-		}
-	}
-
-	return set_clk_enet(ENET_125MHZ);
+	/* EPD */
+    zs_do_config_epd_powerctrl_pins();
+    zs_do_epd_power_on(NULL, 0, 0, NULL);
+	udelay(500);
 }
-
-int board_phy_config(struct phy_device *phydev)
-{
-	/* enable rgmii rxc skew and phy mode select to RGMII copper */
-	phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, 0x21);
-	phy_write(phydev, MDIO_DEVAD_NONE, 0x1f, 0x7ea8);
-	phy_write(phydev, MDIO_DEVAD_NONE, 0x1e, 0x2f);
-	phy_write(phydev, MDIO_DEVAD_NONE, 0x1f, 0x71b7);
-
-	if (phydev->drv->config)
-		phydev->drv->config(phydev);
-	return 0;
-}
-#endif
-
-#define SY7636A_I2C_BUS 3
-#define SY7636A_I2C_ADDR 0x62
-
-#define SY7636A_REG_OPERATIONMODE 0x00
-#define SY7636A_OPERATIONMODE_ONOFF 0x80
-#define SY7636A_OPERATIONMODE_VCOMCTRL 0x40
-
-#define SY7636A_REG_VCOMADJUST_L 0x01
-#define SY7636A_REG_VCOMADJUST_H 0x02
-
-#define SY7636A_VCOMADJUST_LMASK 0xff
-#define SY7636A_VCOMADJUST_HMASK 0x80
-
-static int sy7636a_i2c_reg_write(struct udevice *dev, uint addr, uint mask, uint data)
-{
-	u8 valb;
-	int ret;
-
-	if (mask != 0xff) {
-		ret = dm_i2c_read(dev, addr, &valb, 1);
-		if (ret)
-			return ret;
-
-		valb &= ~mask;
-		valb |= data;
-	} else {
-		valb = data;
-	}
-
-	ret = dm_i2c_write(dev, addr, &valb, 1);
-	return ret;
-}
-
-static int sy7636a_i2c_reg_read(struct udevice *dev, u8 addr, u8 *data)
-{
-	u8 valb;
-	int ret;
-
-	ret = dm_i2c_read(dev, addr, &valb, 1);
-	if (ret)
-		return ret;
-
-	*data = (int)valb;
-	return 0;
-}
-
-static int sy7636a_vcom_get(struct udevice *dev, int *vcom)
-{
-	u8 low, high;
-	int ret;
-
-	ret = sy7636a_i2c_reg_read(dev, SY7636A_REG_VCOMADJUST_L, &low);
-	if (ret)
-		return ret;
-
-	ret = sy7636a_i2c_reg_read(dev, SY7636A_REG_VCOMADJUST_H, &high);
-	if (ret)
-		return ret;
-
-	low &= SY7636A_VCOMADJUST_LMASK;
-	high &= SY7636A_VCOMADJUST_HMASK;
-
-	*vcom = -10 * (low | ((u16)high << 1));
-	*vcom = (*vcom < -5000) ? -5000 : *vcom;
-	return 0;
-}
-
-static int sy7636a_vcom_set(struct udevice *dev, int vcom)
-{
-	u8 high, low;
-	int ret;
-
-	if (vcom < 0)
-		vcom = -vcom;
-
-	vcom /= 10;
-
-	if (vcom > 0x01FF)
-		return -EINVAL;
-
-	low = vcom & SY7636A_VCOMADJUST_LMASK;
-	high = ((u16)vcom >> 1) & SY7636A_VCOMADJUST_HMASK;
-
-	ret = sy7636a_i2c_reg_write(dev, SY7636A_REG_VCOMADJUST_L, SY7636A_VCOMADJUST_LMASK, low);
-	if (ret)
-		return ret;
-
-	return sy7636a_i2c_reg_write(dev, SY7636A_REG_VCOMADJUST_H, SY7636A_VCOMADJUST_HMASK, high);
-}
-
-static int do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	struct udevice *bus, *dev;
-	u8 mask, val;
-	ulong vcom;
-	int ivcom;
-
-	int ret;
-
-	ret = uclass_get_device_by_seq(UCLASS_I2C, SY7636A_I2C_BUS, &bus);
-	if (ret) {
-		printf("%s: No bus %d\n", __func__, SY7636A_I2C_BUS);
-		return -1;
-	}
-
-	ret = dm_i2c_probe(bus, SY7636A_I2C_ADDR, 0, &dev);
-	if (ret) {
-		printf("%s: Can't find device id=0x%x, on bus %d\n",
-			__func__, SY7636A_I2C_ADDR, SY7636A_I2C_BUS);
-		return -1;
-	}
-
-	ret = sy7636a_vcom_get(dev, &ivcom);
-	if (ret)
-		return ret;
-
-	vcom = env_get_ulong("vcom", 10, 1250);
-	printf("vcom was %dmV, setting to -%lumV\n", ivcom, vcom);
-
-	ret = sy7636a_vcom_set(dev, vcom);
-	if (ret)
-		return ret;
-
-	/* Power on, include VCOM in power sequence */
-	mask = (SY7636A_OPERATIONMODE_ONOFF | SY7636A_OPERATIONMODE_VCOMCTRL);
-	val = SY7636A_OPERATIONMODE_ONOFF;
-
-	return sy7636a_i2c_reg_write(dev, SY7636A_REG_OPERATIONMODE, mask, val);
-}
-
-U_BOOT_CMD(
-	epd_power_on,	1,	1,	do_epd_power_on,
-	"Turn on power for eInk Display",
-	""
-);
 
 int board_early_init_f(void)
 {
@@ -421,146 +81,17 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
-#ifdef CONFIG_FEC_MXC
-	setup_fec(CONFIG_FEC_ENET_DEV);
-#endif
-
 	return 0;
 }
-
-#ifdef CONFIG_CMD_BMODE
-static const struct boot_mode board_boot_modes[] = {
-	/* 4 bit bus width */
-	{"sd1", MAKE_CFGVAL(0x10, 0x10, 0x00, 0x00)},
-	{"emmc", MAKE_CFGVAL(0x10, 0x2a, 0x00, 0x00)},
-	/* TODO: Nand */
-	{"qspi", MAKE_CFGVAL(0x00, 0x40, 0x00, 0x00)},
-	{NULL,   0},
-};
-#endif
-
-static void power_perfs(void)
-{
-	printk("Powering up peripherals\n");
-
-	/* WIFI */
-	gpio_request(IMX_GPIO_NR(6, 13), "WIFI_PWR_EN");
-	gpio_direction_output(IMX_GPIO_NR(6, 13) , 1);
-	udelay(500);
-
-	/* DIGITIZER */
-	gpio_request(IMX_GPIO_NR(1, 1), "DIGITIZER_INT");
-	gpio_direction_input(IMX_GPIO_NR(1, 1));
-	gpio_request(IMX_GPIO_NR(1, 6), "DIGITIZER_PWR_EN");
-	gpio_direction_output(IMX_GPIO_NR(1, 6), 1);
-	udelay(500);
-
-	/* EPD */
-	gpio_request(IMX_GPIO_NR(4, 22), "EPD_PMIC_I2C_PULLUP");
-	gpio_direction_output(IMX_GPIO_NR(4, 22), 1);
-	gpio_request(IMX_GPIO_NR(7, 10), "PMIC_LDO4VEN");
-	gpio_direction_output(IMX_GPIO_NR(7, 10), 1);
-	gpio_request(IMX_GPIO_NR(7, 11), "EPD_PMIC_POWERUP");
-	gpio_direction_output(IMX_GPIO_NR(7, 11), 1);
-	do_epd_power_on(NULL, 0, 0, NULL);
-	udelay(500);
-}
-
-static void config_32K_wifi_clk(void)
-{
-    /* Set 32K clock source for the CLKO2 clock */
-    printf("Setting IPP_D0_CLKO2 to get input from OSC_32K_CLK..\n");
-    clock_set_src(IPP_DO_CLKO2, OSC_32K_CLK);
-}
-U_BOOT_CMD(
-	32K_wifi_clk_on, 1,	1, config_32K_wifi_clk,
-	"Turn on 32K clock for external wifi module",
-	"Turn on the 32K clock which is required for the external wifi module to run"
-);
 
 int board_late_init(void)
 {
 	struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
-#ifdef CONFIG_CMD_BMODE
-	add_board_boot_modes(board_boot_modes);
-#endif
 
-	env_set("tee", "no");
-#ifdef CONFIG_IMX_OPTEE
-	env_set("tee", "yes");
-#endif
-
-#ifdef CONFIG_ENV_IS_IN_MMC
-	board_late_mmc_env_init();
-#endif
-
-	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
-
+    imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 	set_wdog_reset(wdog);
 
 	power_perfs();
 
-	config_32K_wifi_clk();
-
 	return 0;
 }
-
-int checkboard(void)
-{
-	int rev = mx7sabre_rev();
-	char *mode;
-	char *revname;
-
-	if (IS_ENABLED(CONFIG_ARMV7_BOOT_SEC_DEFAULT))
-		mode = "secure";
-	else
-		mode = "non-secure";
-
-	switch (rev) {
-	case BOARD_REV_C:
-		revname = "C";
-		break;
-	case BOARD_REV_B:
-		revname = "B";
-		break;
-	case BOARD_REV_A:
-	default:
-		revname = "A";
-		break;
-	}
-
-	printf("Board: i.MX7D SABRESD Rev%s in %s mode\n", revname, mode);
-
-	return 0;
-}
-
-#ifdef CONFIG_FSL_FASTBOOT
-#ifdef CONFIG_ANDROID_RECOVERY
-
-/* Use S3 button for recovery key */
-#define GPIO_VOL_DN_KEY IMX_GPIO_NR(5, 10)
-iomux_v3_cfg_t const recovery_key_pads[] = {
-	(MX7D_PAD_SD2_WP__GPIO5_IO10 | MUX_PAD_CTRL(BUTTON_PAD_CTRL)),
-};
-
-int is_recovery_key_pressing(void)
-{
-	int button_pressed = 0;
-
-	/* Check Recovery Combo Button press or not. */
-	imx_iomux_v3_setup_multiple_pads(recovery_key_pads,
-		ARRAY_SIZE(recovery_key_pads));
-
-	gpio_request(GPIO_VOL_DN_KEY, "volume_dn_key");
-	gpio_direction_input(GPIO_VOL_DN_KEY);
-
-	if (gpio_get_value(GPIO_VOL_DN_KEY) == 0) { /* VOL_DN key is low assert */
-		button_pressed = 1;
-		printf("Recovery key pressed\n");
-	}
-
-	return  button_pressed;
-}
-
-#endif /*CONFIG_ANDROID_RECOVERY*/
-#endif /*CONFIG_FSL_FASTBOOT*/

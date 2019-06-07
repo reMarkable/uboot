@@ -3,4 +3,10 @@
 # SPDX-License-Identifier:	GPL-2.0+
 #
 
-obj-y  := zero-sugar.o ../../freescale/common/pfuze.o ../../freescale/common/mmc.o
+obj-y  := zero-sugar.o \
+          uart_init.o \
+          wifi_init.o \
+          epd_init.o \
+          lcd_init.o \
+          digitizer_init.o \
+          ../../freescale/common/mmc.o
