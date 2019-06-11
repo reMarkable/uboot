@@ -55,8 +55,7 @@ static void power_perfs(void)
 	printk("Powering up peripherals\n");
 
 	/* WIFI */
-    zs_do_setup_32K_wifi_clk();
-    zs_do_config_wifi_powerctrl_pins();
+    zs_do_wifi_poweron_cycle();
 	udelay(500);
 
 	/* DIGITIZER */
