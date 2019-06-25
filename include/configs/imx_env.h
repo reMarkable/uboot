@@ -28,9 +28,6 @@
 	 "gpio set 202;" \
 	 "gpio set 203;" \
 	 "gpio set 6;" \
-	 "epd_power_on;" \
-	 "setenv vcom 1770;" \
-	 "epd_power_on;" \
 	 "bootz 0x82000000 - 0x88000000;" \
 	"\0" \
 

@@ -169,9 +169,6 @@
         "gpio set 202;" \
         "gpio set 203;" \
         "gpio set 6;" \
-        "epd_power_on;" \
-        "setenv vcom 1770;" \
-        "epd_power_on;" \
 		"if test ${tee} = yes; then " \
 			"run loadfdt; run loadtee; bootm ${tee_addr} - ${fdt_addr}; " \
 		"else " \
