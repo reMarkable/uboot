@@ -13,6 +13,7 @@
 #include "lcd_init.h"
 #include "epd_init.h"
 #include "digitizer_init.h"
+#include "charger_init.h"
 
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -68,6 +69,40 @@ static void power_perfs(void)
 	udelay(500);
 }
 
+static int init_charger(void)
+{
+    int ret;
+    printf("----------------------------------------------\n");
+    printf("Initiating charging parameters\n");
+    ret = max77818_init_device();
+    if (ret != 0)
+        return ret;
+
+    printf("----------------------------------------------\n");
+    printf("Setting fast charge current: 2.8A\n");
+    ret = max77818_set_fast_charge_current_2800_ma(NULL);
+    if (ret != 0)
+        return ret;
+
+    printf("----------------------------------------------\n");
+    printf("Setting pogo input current limit: 2.8A\n");
+    ret = max77818_set_pogo_input_current_limit(NULL);
+    if (ret != 0)
+        return ret;
+
+    printf("----------------------------------------------\n");
+    printf("Setting USB-C input current limit: 1.2A\n");
+    ret = max77818_set_usbc_input_current_limit(NULL);
+    if (ret != 0)
+        return ret;
+
+    printf("----------------------------------------------\n");
+    printf("Setting charge termination voltage: 3.4V\n");
+    ret = max77818_set_charge_termination_voltage(NULL);
+    if (ret != 0)
+        return ret;
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -90,6 +125,7 @@ int board_late_init(void)
     imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 	set_wdog_reset(wdog);
 
+    init_charger();
 	power_perfs();
 
 	return 0;

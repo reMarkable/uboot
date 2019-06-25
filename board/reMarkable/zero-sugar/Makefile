@@ -9,4 +9,5 @@ obj-y  := zero-sugar.o \
           epd_init.o \
           lcd_init.o \
           digitizer_init.o \
+          charger_init.o \
           ../../freescale/common/mmc.o
