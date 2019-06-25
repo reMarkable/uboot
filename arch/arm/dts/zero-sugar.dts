@@ -208,7 +208,7 @@
 	cd-post;
 	pm-ignore-notify;
 	wifi-host;
-	status = "okay";
+	status = "disabled";
 };
 
 &usdhc3 {
