@@ -17,10 +17,10 @@
 	"bootcmd_mfg=" \
 	 "run mfgtool_args;" \
 	 "setenv loadaddr 0x82000000;" \
-	 "setenv fdt_file zero-sugar.dtb;" \
+	 "setenv fdt_file /boot/zero-sugar.dtb;" \
 	 "setenv fdt_addr 0x88000000;" \ 
 	 "setenv mmcdev 0;" \
-	 "setenv mmcpart 1;" \
+	 "setenv mmcpart 2;" \
 	 "run loadimage;" \
 	 "run loadfdt;" \
 	 "gpio input 1;" \
