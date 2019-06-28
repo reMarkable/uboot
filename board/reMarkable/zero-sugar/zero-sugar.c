@@ -14,6 +14,7 @@
 #include "epd_init.h"
 #include "digitizer_init.h"
 #include "charger_init.h"
+#include "serial_download_trap.h"
 
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -127,6 +128,6 @@ int board_late_init(void)
 
     init_charger();
 	power_perfs();
-
+    probe_serial_download_trap();
 	return 0;
 }

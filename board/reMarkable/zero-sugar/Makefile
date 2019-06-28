@@ -10,4 +10,5 @@ obj-y  := zero-sugar.o \
           lcd_init.o \
           digitizer_init.o \
           charger_init.o \
+          serial_download_trap.o \
           ../../freescale/common/mmc.o

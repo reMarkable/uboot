@@ -12,6 +12,28 @@
 
 static int curr_device = -1;
 
+/* SBA: public access routine to erase the first 3K of the boot partition of the device in order to force serial download mode */
+int erase_boot0()
+{
+    struct mmc *mmc;
+    u32 blk, cnt, n;
+
+    blk = 0;
+    cnt = 3;
+
+    mmc = init_mmc_device(0, false);
+    if (!mmc)
+        return CMD_RET_FAILURE;
+
+    printf("\nMMC erase: dev # %d, block # %d, count %d ... ",
+           0, blk, cnt);
+
+    n = blk_derase(mmc_get_blk_desc(mmc), blk, cnt);
+    printf("%d blocks erased: %s\n", n, (n == cnt) ? "OK" : "ERROR");
+
+    return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
+}
+
 static void print_mmcinfo(struct mmc *mmc)
 {
 	int i;

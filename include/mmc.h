@@ -403,6 +403,10 @@ struct mmc_data {
 /* forward decl. */
 struct mmc;
 
+/* SBA: public access routine to erase the first 3K of the boot partition of the device in order to force serial download mode */
+static struct mmc *init_mmc_device(int dev, bool force_init);
+int erase_boot0();
+
 #if CONFIG_IS_ENABLED(DM_MMC)
 struct dm_mmc_ops {
 	/**
