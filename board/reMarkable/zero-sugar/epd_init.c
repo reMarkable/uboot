@@ -98,12 +98,15 @@ static int sy7636a_vcom_set(struct udevice *dev, int vcom)
 
 int zs_do_config_epd_powerctrl_pins(void)
 {
+    printf("Configuring EPD PMIC I2C pullup..\n");
     gpio_request(IMX_GPIO_NR(4, 22), "EPD_PMIC_I2C_PULLUP");
     gpio_direction_output(IMX_GPIO_NR(4, 22), 1);
 
+    printf("Configuring EPD PMIC LDO4VEN..\n");
     gpio_request(IMX_GPIO_NR(7, 10), "PMIC_LDO4VEN");
     gpio_direction_output(IMX_GPIO_NR(7, 10), 1);
 
+    printf("Configuring EPD PMIC powerup signal..\n");
     gpio_request(IMX_GPIO_NR(7, 11), "EPD_PMIC_POWERUP");
     gpio_direction_output(IMX_GPIO_NR(7, 11), 1);
 }
