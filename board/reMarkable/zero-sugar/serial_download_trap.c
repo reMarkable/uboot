@@ -11,6 +11,8 @@ static iomux_v3_cfg_t const pogo_pads[] = {
     MX7D_PAD_SAI1_RX_BCLK__GPIO6_IO17 | MUX_PAD_CTRL(PAD_CTL_PUS_PU100KOHM)
 };
 
+#define TRAPMODE_POGO 1
+#define TRAPMODE_USB 2
 int probe_serial_download_trap()
 {
     int msecs = 0;
@@ -20,6 +22,7 @@ int probe_serial_download_trap()
     int curDetectionPos = 0;
     int curOutputValue = 0;
     int curInputValue = 0;
+    int trapMode = 0;
 
     bool serial_download_trap_is_active = false;
 
@@ -37,7 +40,7 @@ int probe_serial_download_trap()
 
     printf("Probing for serial download trap..\n");
     while (msecs < 2000) {
-        printf("------------------------------------------------\n");
+        printf("----------------------------------------------\n");
         pogoInput = gpio_get_value(IMX_GPIO_NR(6, 15));
         usbInput = gpio_get_value(IMX_GPIO_NR(6, 17));
         printf("msecs: %d\n", msecs);
@@ -53,42 +56,72 @@ int probe_serial_download_trap()
             curOutputValue = detectionCode;
             curInputValue = 0;
             serial_download_trap_is_active = true;
+
+            trapMode = ((pogoInput == 0) ? TRAPMODE_POGO : TRAPMODE_USB);
         }
 
         if (serial_download_trap_is_active) {
-            if (curDetectionPos < 16)
-            {
-                printf("Generating detection bit %d\n", curDetectionPos);
-                printf("curOutputValue: 0x%04X => setting output = %d\n", curOutputValue, curOutputValue & 0x01);
-                gpio_set_value(IMX_GPIO_NR(6, 12), curOutputValue & 0x01);
-                udelay(1000);
+            switch(trapMode) {
+                case TRAPMODE_USB:
+                    printf("Current trap mode USB\n");
+                    if (curDetectionPos < 16)
+                    {
+                        printf("Generating detection bit %d\n", curDetectionPos);
+                        printf("curOutputValue: 0x%04X => setting output = %d\n", curOutputValue, curOutputValue & 0x01);
+                        gpio_set_value(IMX_GPIO_NR(6, 12), curOutputValue & 0x01);
+                        udelay(1000);
 
-                curInputValue = gpio_get_value(IMX_GPIO_NR(6, 17));
-                printf("Read input: %d\n", curInputValue);
-                if(curInputValue == (curOutputValue & 0x01)) {
-                    printf("Match !\n");
+                        curInputValue = gpio_get_value(IMX_GPIO_NR(6, 17));
+                        printf("Read input: %d\n", curInputValue);
+                        if(curInputValue == (curOutputValue & 0x01)) {
+                            printf("Match !\n");
 
-                    curDetectionPos++;
-                    curOutputValue >>= 1;
+                            curDetectionPos++;
+                            curOutputValue >>= 1;
 
-                    if (curDetectionPos >= 16) {
-                        printf("-------------------------------------------------------\n");
-                        printf("Sequence complete - enabling serial download mode !!\n\n");
-                        erase_boot0();
-                        printf("\n\nPlease restar device to enter serial download mode !\n");
-                        printf("-------------------------------------------------------\n");
-                        while(1);
+                            if (curDetectionPos >= 16) {
+                                printf("------------------------------------------------------\n");
+                                printf("Sequence complete - enabling serial download mode !!\n\n");
+                                erase_boot0();
+                                printf("\n\nPlease restart device to enter serial download mode !\n");
+                                printf("------------------------------------------------------\n");
+                                while(1);
+                            }
+
+                            printf("curDetectionPos => %d\n", curDetectionPos);
+                            printf("curOutputValue => 0x%04X\n", curOutputValue);
+                        }
+                        else {
+                            printf("Mismatch .. aborting \n");
+                            msecs = 0;
+                            gpio_set_value(IMX_GPIO_NR(6, 12), 0);
+                            serial_download_trap_is_active = false;
+                        }
                     }
+                    break;
 
-                    printf("curDetectionPos => %d\n", curDetectionPos);
-                    printf("curOutputValue => 0x%04X\n", curOutputValue);
-                }
-                else {
-                    printf("Mismatch .. aborting \n");
-                    msecs = 0;
-                    gpio_set_value(IMX_GPIO_NR(6, 12), 0);
-                    serial_download_trap_is_active = false;
-                }
+                case TRAPMODE_POGO:
+                    printf("Current trapmode POGO\n");
+                    if (usbInput == 0){
+                        printf("POGO serial download trap still detected\n");
+                        if (msecs >= 1500) {
+                            printf("Sequence complete - enabling serial download mode !!\n\n");
+                            erase_boot0();
+                            printf("\n\nPlease restart device to enter serial download mode !\n");
+                            printf("------------------------------------------------------\n");
+                            while(1);
+                        }
+                    }
+                    else {
+                        printf("POGO serial download trap no longer active, aborting\n");
+                        msecs = 0;
+                        serial_download_trap_is_active = false;
+                    }
+                    break;
+
+                default:
+                    printf("Invalid trapmode, aborting\n");
+                    return;
             }
         }
 
@@ -96,5 +129,7 @@ int probe_serial_download_trap()
         msecs += 100;
     }
 
+    printf("msecs: %d\n", msecs);
     printf("Serial download mode request not detected, continuing normal boot..\n");
+    printf("-------------------------------------------------------\n");
 }
