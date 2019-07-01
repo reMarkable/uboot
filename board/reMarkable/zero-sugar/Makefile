@@ -8,6 +8,7 @@ obj-y  := zero-sugar.o \
           wifi_init.o \
           epd_init.o \
           lcd_init.o \
+          touch_init.o \
           digitizer_init.o \
           charger_init.o \
           serial_download_trap.o \
