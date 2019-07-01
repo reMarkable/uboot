@@ -12,28 +12,6 @@
 
 static int curr_device = -1;
 
-/* SBA: public access routine to erase the first 3K of the boot partition of the device in order to force serial download mode */
-int erase_boot0()
-{
-    struct mmc *mmc;
-    u32 blk, cnt, n;
-
-    blk = 0;
-    cnt = 3;
-
-    mmc = init_mmc_device(0, false);
-    if (!mmc)
-        return CMD_RET_FAILURE;
-
-    printf("\nMMC erase: dev # %d, block # %d, count %d ... ",
-           0, blk, cnt);
-
-    n = blk_derase(mmc_get_blk_desc(mmc), blk, cnt);
-    printf("%d blocks erased: %s\n", n, (n == cnt) ? "OK" : "ERROR");
-
-    return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
-}
-
 static void print_mmcinfo(struct mmc *mmc)
 {
 	int i;
@@ -922,3 +900,40 @@ U_BOOT_CMD(
 	"display MMC info",
 	"- display info of the current MMC device"
 );
+
+
+/* SBA: public access routine to erase the first 3K of the boot partition of the device in order to force serial download mode */
+int erase_boot0(void)
+{
+    int ret;
+    struct mmc *mmc;
+    u32 blk, cnt, n;
+
+    blk = 0;
+    cnt = 3;
+
+    printf("(Re)initiazing mmc device 0..\n");
+    mmc = init_mmc_device(0, true);
+    if (!mmc)
+        return CMD_RET_FAILURE;
+
+    /* Select boot0 HW part of mmc device 0 */
+    printf("Selecting HW part 1 of mmc device 0 (boot0)..\n");
+    ret = blk_select_hwpart_devnum(IF_TYPE_MMC, 0, 1);
+    if (ret)
+        return CMD_RET_FAILURE;
+
+    printf("\nErasing three first blocks of mmc device 0 (part 1)..\n",
+           0, blk, cnt);
+
+    n = blk_derase(mmc_get_blk_desc(mmc), blk, cnt);
+    if(n == cnt) {
+        printf("3 blocks erased\n");
+        return CMD_RET_SUCCESS;
+    }
+    else {
+        printf("Failed to complete erase operation !\n");
+        printf("Please try to restart device and verify if fallback to serial download mode was successful !\n");
+        return CMD_RET_FAILURE;
+    }
+}

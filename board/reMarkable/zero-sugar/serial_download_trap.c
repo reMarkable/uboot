@@ -13,7 +13,7 @@ static iomux_v3_cfg_t const pogo_pads[] = {
 
 #define TRAPMODE_POGO 1
 #define TRAPMODE_USB 2
-int probe_serial_download_trap()
+int probe_serial_download_trap(void)
 {
     int msecs = 0;
     int pogoInput = 0;
@@ -38,6 +38,7 @@ int probe_serial_download_trap()
     gpio_direction_input(IMX_GPIO_NR(6, 17));
 
 
+    printf("\n----------------------------------------------\n");
     printf("Probing for serial download trap..\n");
     while (msecs < 2000) {
         printf("----------------------------------------------\n");
@@ -102,7 +103,7 @@ int probe_serial_download_trap()
 
                 case TRAPMODE_POGO:
                     printf("Current trapmode POGO\n");
-                    if (usbInput == 0){
+                    if (pogoInput == 0){
                         printf("POGO serial download trap still detected\n");
                         if (msecs >= 1500) {
                             printf("Sequence complete - enabling serial download mode !!\n\n");
@@ -121,6 +122,7 @@ int probe_serial_download_trap()
 
                 default:
                     printf("Invalid trapmode, aborting\n");
+                    printf("----------------------------------------------\n");
                     return;
             }
         }
@@ -129,7 +131,8 @@ int probe_serial_download_trap()
         msecs += 100;
     }
 
+    printf("-----------------------------------------------------------------------\n");
     printf("msecs: %d\n", msecs);
     printf("Serial download mode request not detected, continuing normal boot..\n");
-    printf("-------------------------------------------------------\n");
+    printf("-----------------------------------------------------------------------\n");
 }
