@@ -12,6 +12,7 @@
 #include "uart_init.h"
 #include "lcd_init.h"
 #include "epd_init.h"
+#include "touch_init.h"
 #include "digitizer_init.h"
 #include "charger_init.h"
 #include "serial_download_trap.h"
@@ -54,20 +55,26 @@ static iomux_v3_cfg_t const wdog_pads[] = {
 
 static void power_perfs(void)
 {
+    printf("\n----------------------------------------------\n");
 	printk("Powering up peripherals\n");
+    printf("----------------------------------------------\n");
 
-	/* WIFI */
-    zs_do_wifi_poweron_cycle();
-	udelay(500);
+    /* EPD */
+    zs_do_config_epd_powerctrl_pins();
+    zs_do_epd_power_on(NULL, 0, 0, NULL);
+    udelay(500000);
+
+    /* TOUCH */
+    zs_do_config_touch_powerctrl_pins();
+    udelay(500000);
 
 	/* DIGITIZER */
     zs_do_config_digitizer_powerctrl_pins();
-	udelay(500);
+    udelay(500000);
 
-	/* EPD */
-    zs_do_config_epd_powerctrl_pins();
-    zs_do_epd_power_on(NULL, 0, 0, NULL);
-	udelay(500);
+    /* WIFI */
+    zs_do_wifi_poweron_cycle();
+    udelay(500000);
 }
 
 static int init_charger(void)
