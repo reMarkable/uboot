@@ -61,6 +61,7 @@ static void power_perfs(void)
 
     /* EPD */
     zs_do_config_epd_powerctrl_pins();
+    udelay(500000);
     zs_do_epd_power_on(NULL, 0, 0, NULL);
     udelay(500000);
 
