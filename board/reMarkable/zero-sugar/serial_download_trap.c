@@ -13,6 +13,9 @@ static iomux_v3_cfg_t const pogo_pads[] = {
 
 #define TRAPMODE_POGO 1
 #define TRAPMODE_USB 2
+
+#define MAX_TRIES 3
+
 int probe_serial_download_trap(void)
 {
     int msecs = 0;
@@ -23,6 +26,7 @@ int probe_serial_download_trap(void)
     int curOutputValue = 0;
     int curInputValue = 0;
     int trapMode = 0;
+    int trialCount = 0;
 
     bool serial_download_trap_is_active = false;
 
@@ -94,9 +98,18 @@ int probe_serial_download_trap(void)
                         }
                         else {
                             printf("Mismatch .. aborting \n");
-                            msecs = 0;
-                            gpio_set_value(IMX_GPIO_NR(6, 12), 0);
-                            serial_download_trap_is_active = false;
+                            trialCount++;
+                            if (trialCount >= MAX_TRIES) {
+                                printf("%d attemps have been done, possible bad connection or false detection\n", MAX_TRIES);
+                                printf("Continuing normal boot..\n");
+                                printf("-----------------------------------------------------------------------\n");
+                                return 0;
+                            }
+                            else {
+                                msecs = 0;
+                                gpio_set_value(IMX_GPIO_NR(6, 12), 0);
+                                serial_download_trap_is_active = false;
+                            }
                         }
                     }
                     break;
@@ -115,15 +128,24 @@ int probe_serial_download_trap(void)
                     }
                     else {
                         printf("POGO serial download trap no longer active, aborting\n");
-                        msecs = 0;
-                        serial_download_trap_is_active = false;
+                        trialCount++;
+                        if(trialCount >= MAX_TRIES) {
+                            printf("%d attemps have been done, possible bad connection or false detection\n", MAX_TRIES);
+                            printf("Continuing normal boot..\n");
+                            printf("-----------------------------------------------------------------------\n");
+                            return 0;
+                        }
+                        else {
+                            msecs = 0;
+                            serial_download_trap_is_active = false;
+                        }
                     }
                     break;
 
                 default:
                     printf("Invalid trapmode, aborting\n");
                     printf("----------------------------------------------\n");
-                    return;
+                    return 1;
             }
         }
 
@@ -135,4 +157,6 @@ int probe_serial_download_trap(void)
     printf("msecs: %d\n", msecs);
     printf("Serial download mode request not detected, continuing normal boot..\n");
     printf("-----------------------------------------------------------------------\n");
+
+    return 0;
 }
