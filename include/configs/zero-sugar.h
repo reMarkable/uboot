@@ -110,111 +110,72 @@
 		"rootfs part 0 2\0" \
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	UPDATE_M4_ENV \
-	CONFIG_MFG_ENV_SETTINGS \
-	TEE_ENV \
-	CONFIG_DFU_ENV_SETTINGS \
-	"script=boot.scr\0" \
 	"image=/boot/zImage\0" \
 	"console=ttymxc0\0" \
-	"fdt_high=0xffffffff\0" \
-	"initrd_high=0xffffffff\0" \
 	"fdt_file=/boot/zero-sugar.dtb\0" \
 	"fdt_addr=0x83000000\0" \
-	"tee_addr=0x84000000\0" \
-	"tee_file=uTee-7dsdb\0" \
-	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
 	"panel=TFT43AB\0" \
 	"mmcdev=0\0" \
-	"mmcpart=2\0" \
-	"mmcroot=/dev/mmcblk2p2 rootwait rw\0" \
+	"active_partition=2\0" \
+	"fallback_partition=3\0 " \
+	"bootlimit=1\0 " \
 	"mmcautodetect=yes\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot}\0" \
-	"loadbootscript=" \
-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-	"bootscript=echo Running bootscript from mmc ...; " \
-		"source\0" \
-	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
-	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"loadtee=fatload mmc ${mmcdev}:${mmcpart} ${tee_addr} ${tee_file}\0" \
+		"root=/dev/mmcblk2p${active_partition} rootwait rootfstype=ext4 rw\0" \
+	"loadimage=ext4load mmc ${mmcdev}:${active_partition} ${loadaddr} ${image}\0" \
+	"loadfdt=ext4load mmc ${mmcdev}:${active_partition} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-        "gpio input 1;" \
-        "gpio set 11;" \
-        "gpio set 118;" \
-        "gpio set 202;" \
-        "gpio set 203;" \
-        "gpio set 6;" \
-		"if test ${tee} = yes; then " \
-			"run loadfdt; run loadtee; bootm ${tee_addr} - ${fdt_addr}; " \
-		"else " \
-			"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+		"mmc dev ${mmcdev}; " \
+		"if mmc rescan; then " \
+			"if run loadimage; then " \
 				"if run loadfdt; then " \
 					"bootz ${loadaddr} - ${fdt_addr}; " \
 				"else " \
-					"if test ${boot_fdt} = try; then " \
-						"bootz; " \
-					"else " \
-						"echo WARN: Cannot load the DT; " \
-					"fi; " \
+					"echo WARN: Cannot load the DT; " \
 				"fi; " \
-			"else " \
-				"bootz; " \
 			"fi; " \
 		"fi;\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs " \
-	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
-		"netboot=echo Booting from net ...; " \
-		"run netargs; " \
-		"if test ${ip_dyn} = yes; then " \
-			"setenv get_cmd dhcp; " \
-		"else " \
-			"setenv get_cmd tftp; " \
+	"memboot=echo Booting from memory...; " \
+		"setenv bootargs console=${console},${baudrate} " \
+		"g_mass_storage.stall=0 g_mass_storage.removable=1 " \
+		"g_mass_storage.idVendor=0x066F g_mass_storage.idProduct=0x37FF "\
+		"g_mass_storage.iSerialNumber=\"\" rdinit=/linuxrc; "\
+		"bootz ${loadaddr} ${initrd} ${fdt_addr};\0" \
+	"altbootcmd=echo Running from fallback root...; " \
+		"run memboot; " \
+		"if test ${bootcount} -gt 10; then " \
+			"echo WARN: Failed too much, resetting bootcount and turning off; " \
+			"setenv bootcount 0; " \
+			"saveenv; " \
+			"poweroff; " \
 		"fi; " \
-		"${get_cmd} ${image}; " \
-		"if test ${tee} = yes; then " \
-			"${get_cmd} ${tee_addr} ${tee_file}; " \
-			"${get_cmd} ${fdt_addr} ${fdt_file}; " \
-			"bootm ${tee_addr} - ${fdt_addr}; " \
-		"else " \
-			"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-				"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
-					"bootz ${loadaddr} - ${fdt_addr}; " \
-				"else " \
-					"if test ${boot_fdt} = try; then " \
-						"bootz; " \
-					"else " \
-						"echo WARN: Cannot load the DT; " \
-					"fi; " \
-				"fi; " \
-			"else " \
-				"bootz; " \
-			"fi; " \
-		"fi;\0" \
-		"findfdt="\
-			"if test $fdt_file = undefined; then " \
-				"setenv fdt_file imx7-test-image_stripped.dtb; " \
-			"fi;\0" \
+		"setenv mmcpart ${fallback_partition}; " \
+		"setenv bootargs console=${console},${baudrate} " \
+				"root=/dev/mmcblk2p${fallback_partition} rootwait rootfstype=ext4 quiet rw " \
+				"systemd.log_level=debug systemd.log_target=kmsg memtest " \
+				"log_buf_len=1M printk.devkmsg systemd.journald.forward_to_console=1; " \
+		"run mmcboot;\0" \
 
+/* Always try to boot from memory first, in case of USB download mode */
 #define CONFIG_BOOTCOMMAND \
 	"if test ! -e mmc 0:1 uboot.env; then " \
 		"saveenv; " \
 	"fi; " \
-	   "run findfdt;" \
-	   "mmc dev ${mmcdev};" \
-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
-		   "if run loadbootscript; then " \
-			   "run bootscript; " \
-		   "else " \
-			   "if run loadimage; then " \
-				   "run mmcboot; " \
-			   "else run netboot; " \
-			   "fi; " \
-		   "fi; " \
-	   "else run netboot; fi"
+	"run memboot; " \
+	"run mmcargs; " \
+	"gpio input 1;" \
+	"gpio set 11;" \
+	"gpio set 118;" \
+	"gpio set 202;" \
+	"gpio set 203;" \
+	"gpio set 6;" \
+	"setenv mmcpart ${active_partition}; " \
+	"run mmcboot; " \
+	"echo WARN: unable to boot from either RAM or eMMC; " \
+	"setenv upgrade_available 1; " \
+	"saveenv; " \
+	"reset; "
 
 #define CONFIG_SYS_MEMTEST_START	0x80000000
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 0x20000000)
