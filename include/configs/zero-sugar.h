@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2015 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2019 reMarkable AS
  *
- * Configuration settings for the Freescale i.MX7D SABRESD board.
+ * Configuration settings for the reMarkable fusion board.
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -109,28 +109,6 @@
 		"bootimg part 0 1;"\
 		"rootfs part 0 2\0" \
 
-#if defined(CONFIG_NAND_BOOT)
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	CONFIG_MFG_ENV_SETTINGS \
-	TEE_ENV \
-	"panel=TFT43AB\0" \
-	"fdt_addr=0x83000000\0" \
-	"fdt_high=0xffffffff\0"	  \
-	"console=ttymxc0\0" \
-	"bootargs=console=ttymxc0,115200 ubi.mtd=4 "  \
-		"root=ubi0:nandrootfs rootfstype=ubifs "		     \
-		MFG_NAND_PARTITION \
-		"\0" \
-	"bootcmd=nand read ${loadaddr} 0x4000000 0x800000;"\
-		"nand read ${fdt_addr} 0x5000000 0x100000;"\
-		"if test ${tee} = yes; then " \
-			"nand read ${tee_addr} 0x6000000 0x400000;"\
-			"bootm ${teeaddr} - ${fdt_addr};" \
-		"else " \
-			"bootz ${loadaddr} - ${fdt_addr};" \
-		"fi\0"
-
-#else
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	UPDATE_M4_ENV \
 	CONFIG_MFG_ENV_SETTINGS \
@@ -222,6 +200,9 @@
 			"fi;\0" \
 
 #define CONFIG_BOOTCOMMAND \
+	"if test ! -e mmc 0:1 uboot.env; then " \
+		"saveenv; " \
+	"fi; " \
 	   "run findfdt;" \
 	   "mmc dev ${mmcdev};" \
 	   "mmc dev ${mmcdev}; if mmc rescan; then " \
@@ -234,7 +215,6 @@
 			   "fi; " \
 		   "fi; " \
 	   "else run netboot; fi"
-#endif
 
 #define CONFIG_SYS_MEMTEST_START	0x80000000
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 0x20000000)
@@ -256,7 +236,7 @@
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 
 /* Environment organization */
-#define CONFIG_ENV_SIZE                 SZ_8K
+#define CONFIG_ENV_SIZE		SZ_8K
 
 #ifdef CONFIG_ENV_IS_IN_FAT
 #define CONFIG_BOOTCOUNT_LIMIT
@@ -269,37 +249,13 @@
 #define CONFIG_SYS_AUXCORE_BOOTDATA 0x7F8000 /* Set to TCML address */
 #endif
 
-/*
- * If want to use nand, define CONFIG_CMD_NAND and rework board
- * to support nand, since emmc has pin conflicts with nand
- */
-#ifdef CONFIG_CMD_NAND
-#define CONFIG_NAND_MXS
-#define CONFIG_CMD_NAND_TRIMFFS
-
-/* NAND stuff */
-#define CONFIG_SYS_MAX_NAND_DEVICE	1
-#define CONFIG_SYS_NAND_BASE		0x40000000
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-#define CONFIG_SYS_NAND_ONFI_DETECTION
-
-/* DMA stuff, needed for GPMI/MXS NAND support */
-#define CONFIG_APBH_DMA
-#define CONFIG_APBH_DMA_BURST
-#define CONFIG_APBH_DMA_BURST8
-#endif
-
-#ifdef CONFIG_NAND_MXS
-#define CONFIG_SYS_FSL_USDHC_NUM	1
-#else
 #define CONFIG_SYS_FSL_USDHC_NUM	2
-#endif
 
 /* MMC Config*/
 #define CONFIG_SYS_FSL_ESDHC_ADDR       0
 #define CONFIG_SYS_MMC_ENV_DEV		0   /* USDHC1 */
 #define CONFIG_SYS_MMC_ENV_PART		0	/* user area */
-#define CONFIG_MMCROOT			"/dev/mmcblk0p2"  /* USDHC1 */
+#define CONFIG_MMCROOT			"/dev/mmcblk2p2"  /* USDHC1 */
 
 /* USB Configs */
 #define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
@@ -356,4 +312,4 @@
 
 #define CONFIG_USBD_HS
 
-#endif	/* __CONFIG_H */
+#endif	/* __ZERO_SUGAR_H */

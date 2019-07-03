@@ -110,6 +110,8 @@ static int init_charger(void)
     ret = max77818_set_charge_termination_voltage(NULL);
     if (ret != 0)
         return ret;
+
+    return 0;
 }
 
 int board_early_init_f(void)
