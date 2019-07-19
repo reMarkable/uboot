@@ -40,6 +40,10 @@
 
 #include <asm/mach-imx/video.h>
 
+#include <fat.h>
+#include <console.h>
+#include <membuff.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int dram_init(void)
@@ -59,6 +63,9 @@ static void power_perfs(void)
 	printk("Powering up peripherals\n");
     printf("----------------------------------------------\n");
 
+    /* Introduce a 1 sec delay before any powerup is done */
+    udelay(1000000);
+
     /* EPD */
     zs_do_config_epd_powerctrl_pins();
     udelay(500000);
@@ -71,7 +78,7 @@ static void power_perfs(void)
 
 	/* DIGITIZER */
     zs_do_config_digitizer_powerctrl_pins();
-    udelay(500000);
+    udelay(1000000);
 
     /* WIFI */
     zs_do_wifi_poweron_cycle();
@@ -117,7 +124,6 @@ static int init_charger(void)
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
-
 	return 0;
 }
 
@@ -139,5 +145,18 @@ int board_late_init(void)
     init_charger();
 	power_perfs();
     probe_serial_download_trap();
+
+    /* Try to store console log so far to mmc 0:1 */
+//    printf("Initializing dummy buffer to be written to file ..\n");
+
+//    struct membuff buf;
+//    membuff_new(&buf, 100);
+//    membuff_put(&buf, "This is a test !!!", 18);
+
+//    printf("Trying to write to mmc 0:1 /uboot_console_log ..\n");
+//    if(membuff_avail(&gd->console_out)) {
+//        fat_fswrite_mem("uboot_console_log", &gd->console_out, 10);
+//    }
+
 	return 0;
 }

@@ -203,4 +203,6 @@ int fat_opendir(const char *filename, struct fs_dir_stream **dirsp);
 int fat_readdir(struct fs_dir_stream *dirs, struct fs_dirent **dentp);
 void fat_closedir(struct fs_dir_stream *dirs);
 void fat_close(void);
+
+int fat_fswrite_mem(char *filename, volatile struct membuff *console_buf, int len);
 #endif /* _FAT_H_ */

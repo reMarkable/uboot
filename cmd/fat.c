@@ -18,6 +18,7 @@
 #include <part.h>
 #include <fat.h>
 #include <fs.h>
+#include <membuff.h>
 
 int do_fat_size(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
@@ -96,6 +97,45 @@ U_BOOT_CMD(
 	"<interface> [<dev[:part]>]\n"
 	"    - print information about filesystem from 'dev' on 'interface'"
 );
+
+
+int fat_fswrite_mem(char *filename, volatile struct membuff *console_buf, int len)
+{
+    loff_t size;
+    int ret;
+    unsigned long count;
+    struct blk_desc *dev_desc = NULL;
+    disk_partition_t info;
+    int dev = 0;
+    int part = 1;
+    void *buf;
+
+    part = blk_get_device_part_str("mmc", "0:1", &dev_desc, &info, 1);
+    if (part < 0)
+        return 1;
+
+    dev = dev_desc->devnum;
+
+    if (fat_set_blk_dev(dev_desc, &info) != 0) {
+        printf("\n** Unable to use %s %d:%d for fatwrite **\n",
+            "mmc", dev, part);
+        return 1;
+    }
+    count = len;
+
+    buf = map_sysmem((phys_addr_t)console_buf->start, count);
+    ret = file_fat_write(filename, buf, 0, count, &size);
+    unmap_sysmem(buf);
+    if (ret < 0) {
+        printf("\n** Unable to write \"%s\" from %s %d:%d **\n",
+            filename, "mmc", dev, part);
+        return 1;
+    }
+
+    printf("%llu bytes written\n", size);
+
+    return 0;
+}
 
 #ifdef CONFIG_FAT_WRITE
 static int do_fat_fswrite(cmd_tbl_t *cmdtp, int flag,
