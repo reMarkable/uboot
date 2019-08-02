@@ -54,7 +54,7 @@ int dram_init(void)
 }
 
 static iomux_v3_cfg_t const wdog_pads[] = {
-	MX7D_PAD_GPIO1_IO00__WDOG1_WDOG_B | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX7D_PAD_ENET1_COL__WDOG1_WDOG_ANY | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static void power_perfs(void)
@@ -141,6 +141,11 @@ int board_late_init(void)
 
     imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 	set_wdog_reset(wdog);
+	/*
+	 * Do not assert internal WDOG_RESET_B_DEB(controlled by bit 4),
+	 * since we use PMIC_PWRON to reset the board.
+	 */
+	clrsetbits_le16(&wdog->wcr, 0, 0x10);
 
     init_charger();
 	power_perfs();
