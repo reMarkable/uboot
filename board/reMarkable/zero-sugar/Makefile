@@ -12,4 +12,5 @@ obj-y  := zero-sugar.o \
           digitizer_init.o \
           charger_init.o \
           serial_download_trap.o \
+          jump_rom_usb_download.o \
           ../../freescale/common/mmc.o

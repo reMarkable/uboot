@@ -13,6 +13,8 @@
 #include "mx7_common.h"
 #include "imx_env.h"
 
+#define CONFIG_SYS_DCACHE_OFF
+
 #define CONFIG_DBG_MONITOR
 #define PHYS_SDRAM_SIZE			SZ_1G
 
