@@ -94,6 +94,12 @@ static int init_charger(void)
     if (ret != 0)
         return ret;
 
+    ret = max77818_enable_safeout1();
+    if (ret != 0) {
+        printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
+        return ret;
+    }
+
     printf("----------------------------------------------\n");
     printf("Setting fast charge current: 2.8A\n");
     ret = max77818_set_fast_charge_current_2800_ma(NULL);

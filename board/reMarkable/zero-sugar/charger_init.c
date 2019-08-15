@@ -15,6 +15,9 @@
 #define MAX77818_FG_I2C_ADDR                                0x36
 #define MAX77818_ID_I2C_ADDR                                0x66
 
+#define MAX77818_REG_SAFEOUTCTRL                            0xC6
+#define MAX77818_SAFEOUTCTRL_ENSAFEOUT1                     BIT(6)
+
 #define MAX77818_REG_DETAILS_0                              0xB3
 #define MAX77818_DETAILS_0__BAT_DET_MASK                    0x01
 #define MAX77818_DETAILS_0__BAT_DET_SHIFT                   0x00
@@ -371,6 +374,20 @@ int max77818_init_device()
     printf("OK\n");
 
     return 0;
+}
+
+int max77818_enable_safeout1(void)
+{
+    int ret;
+    u8 val;
+
+    ret = dm_i2c_read(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
+    if (ret)
+        return ret;
+
+    val |= MAX77818_SAFEOUTCTRL_ENSAFEOUT1;
+
+    return dm_i2c_write(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
 }
 
 int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])

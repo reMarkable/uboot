@@ -18,6 +18,8 @@ int max77818_set_pogo_input_current_limit(struct udevice *dev);
 int max77818_set_usbc_input_current_limit(struct udevice *dev);
 int max77818_set_charge_termination_voltage(struct udevice *dev);
 
+int max77818_enable_safeout1(void);
+
 /* CLI COMMAND ROUTINES*/
 int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 int zs_do_set_fastcharge_current_2800_ma(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
