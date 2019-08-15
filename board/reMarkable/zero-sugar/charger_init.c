@@ -7,6 +7,8 @@
 #include <linux/errno.h>
 #include <linux/types.h>
 
+#include <i2c.h>
+
 #define MAX77818_I2C_BUS                                    1
 
 #define MAX77818_CHARGER_I2C_ADDR                           0x69
@@ -200,7 +202,7 @@ int max77818_get_wcin_details(struct udevice *dev)
         break;
 
     default:
-        printf("Unknown winc status: 0x%02X\n");
+        printf("Unknown winc status: 0x%02X\n", regVal);
     }
 
     return 0;
@@ -242,7 +244,7 @@ int max77818_get_chgin_details(struct udevice *dev)
         break;
 
     default:
-        printf("Unknown winc status: 0x%02X\n");
+        printf("Unknown winc status: 0x%02X\n", regVal);
     }
 
     return 0;
@@ -289,7 +291,6 @@ int max77818_set_fast_charge_current_2800_ma(struct udevice *dev)
 
 int max77818_set_charge_termination_voltage(struct udevice *dev)
 {
-    u8 curVal;
     int ret;
 
     dev = (dev ? dev : chDev);
@@ -413,6 +414,8 @@ int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp, int flag, int argc, char *
         printf("Failed to get DETAILS_2 status: 0x%02X\n", ret);
         return ret;
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_get_battery_charge_status, 1, 1, zs_do_get_battery_charge_status,
@@ -454,6 +457,8 @@ int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
             return ret;
         }
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_set_otg_pwr,	2,	1,	zs_do_set_otg_pwr,
@@ -481,6 +486,8 @@ int zs_do_set_fastcharge_current_2800_ma(cmd_tbl_t *cmdtp, int flag, int argc, c
         printf("Failed to set fast charge current: %d\n", ret);
         return ret;
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_set_fast_charge_current_2800_ma, 1, 1, zs_do_set_fastcharge_current_2800_ma,
@@ -508,6 +515,8 @@ int zs_do_set_charge_termination_voltage(cmd_tbl_t *cmdtp, int flag, int argc, c
         printf("Failed to set charge termination voltage: %d\n", ret);
         return ret;
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_set_charge_termination_voltage, 1,	1, zs_do_set_charge_termination_voltage,
@@ -535,6 +544,8 @@ int zs_do_set_pogo_input_current_limit(cmd_tbl_t *cmdtp, int flag, int argc, cha
         printf("Failed to set pogo input current limit: %d\n", ret);
         return ret;
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_set_pogo_input_current_limit, 1,	1, zs_do_set_pogo_input_current_limit,
@@ -562,6 +573,8 @@ int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp, int flag, int argc, cha
         printf("Failed to turn OTG power off: %d\n", ret);
         return ret;
     }
+
+    return 0;
 }
 U_BOOT_CMD(
     max77818_set_usbc_input_current_limit, 1,	1, zs_do_set_usbc_input_current_limit,
