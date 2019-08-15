@@ -381,6 +381,9 @@ int max77818_enable_safeout1(void)
     int ret;
     u8 val;
 
+    if (!idDev)
+        return -ENODEV;
+
     ret = dm_i2c_read(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
     if (ret)
         return ret;
