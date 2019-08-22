@@ -8,29 +8,7 @@
 #include <config.h>
 
 /* DDR script */
-.macro imx7d_ddrphy_latency_setting
-	ldr r2, =ANATOP_BASE_ADDR
-	ldr r3, [r2, #0x800]
-	and r3, r3, #0xFF
-	cmp r3, #0x11
-	bne TUNE_END
-
-	/*TO 1.1*/
-	ldr r1, =0x1c1c1c1c
-	str r1, [r0, #0x7c]
-	ldr r1, =0x1c1c1c1c
-	str r1, [r0, #0x80]
-	ldr r1, =0x30301c1c
-	str r1, [r0, #0x84]
-	ldr r1, =0x00000030
-	str r1, [r0, #0x88]
-	ldr r1, =0x30303030
-	str r1, [r0, #0x6c]
-
-TUNE_END:
-.endm
-
-.macro imx7d_12x12_lpddr3_arm2_setting
+.macro imx7d_zero_sugar_lpddr3_setting
 
 	/* check whether it is a LPSR resume */
 	ldr	r1, =0x30270000
@@ -104,7 +82,7 @@ TUNE_END:
 
 	/* restore DDRC */
 	ldr	r6, =0x0
-	ldr	r7, =0x03040008
+	ldr	r7, =0x01040008
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x1a0
@@ -132,7 +110,7 @@ TUNE_END:
 	str	r7, [r3, r6]
 
 	ldr	r6, =0xe0
-	ldr	r7, =0x00010000
+	ldr	r7, =0x00020000
 	str	r7, [r3, r6]
 
 	ldr	r6, =0xe4
@@ -180,7 +158,7 @@ TUNE_END:
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x180
-	ldr	r7, =0x00600018
+	ldr	r7, =0x20600018
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x184
@@ -196,23 +174,23 @@ TUNE_END:
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x200
-	ldr	r7, =0x00000016
+	ldr	r7, =0x0000001f
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x204
-	ldr	r7, =0x00090909
+	ldr	r7, =0x00080808
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x210
-	ldr	r7, =0xF00
+	ldr	r7, =0xf0f
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x214
-	ldr	r7, =0x08080808
+	ldr	r7, =0x07070707
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x218
-	ldr	r7, =0x0f0f0808
+	ldr	r7, =0x0f070707
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x240
@@ -234,19 +212,6 @@ TUNE_END:
 	bic	r7, r7, #0x2
 	str	r7, [r2, r6]
 
-	ldr	r7, [r1, #0x800]
-	and	r7, r7, #0xFF
-	cmp	r7, #0x11
-	bne	2f
-
-	/* for TO1.1 */
-	ldr	r7, [r11]
-	bic	r7, r7, #(1 << 27)
-	str	r7, [r11]
-	ldr	r7, [r11]
-	bic	r7, r7, #(1 << 29)
-	str	r7, [r11]
-2:
 	/* clear/set bit30 of SNVS_MISC_CTRL to ensure exit from ddr retention */
 	ldr	r7, =(0x1 << 30)
 	str	r7, [r1, #0x388]
@@ -280,51 +245,19 @@ TUNE_END:
 	ldr	r7, =0x1010007e
 	str	r7, [r4, r6]
 
-	ldr     r7, [r1, #0x800]
-	and     r7, r7, #0xFF
-	cmp     r7, #0x11
-	bne     4f
-
-	ldr	r6, =0x7c
-	ldr	r7, =0x1c1c1c1c
+	ldr	r6, =0x1c
+	ldr	r7, =0x01010000
 	str	r7, [r4, r6]
 
-	ldr	r6, =0x80
-	ldr	r7, =0x1c1c1c1c
+	ldr	r6, =0x9c
+	ldr	r7, =0x00000d6e
 	str	r7, [r4, r6]
 
-	ldr	r6, =0x84
-	ldr	r7, =0x30301c1c
-	str	r7, [r4, r6]
-
-	ldr	r6, =0x88
-	ldr	r7, =0x00000030
-	str	r7, [r4, r6]
-
+	/* Lars flavour of Steinars fix */
 	ldr	r6, =0x6c
-	ldr	r7, =0x30303030
+	ldr	r7, =0x00070206
 	str	r7, [r4, r6]
 
-	ldr	r6, =0x1c
-	ldr	r7, =0x01010000
-	str	r7, [r4, r6]
-
-	ldr	r6, =0x9c
-	ldr	r7, =0x0DB60D6E
-	str	r7, [r4, r6]
-
-	b	5f
-
-4:
-	ldr	r6, =0x1c
-	ldr	r7, =0x01010000
-	str	r7, [r4, r6]
-
-	ldr	r6, =0x9c
-	ldr	r7, =0x00000b24
-	str	r7, [r4, r6]
-
-5:
 	ldr	r6, =0x20
 	ldr	r7, =0x0a0a0a0a
 	str	r7, [r4, r6]
@@ -444,7 +377,7 @@ TUNE_END:
 	str r1, [r0, r2]
 
 	ldr r0, =DDRC_IPS_BASE_ADDR
-	ldr r1, =0x03040008
+	ldr r1, =0x01040008
 	str r1, [r0]
 	ldr r1, =0x00200038
 	str r1, [r0, #0x64]
@@ -452,9 +385,11 @@ TUNE_END:
 	str r1, [r0, #0x490]
 	ldr r1, =0x00350001
 	str r1, [r0, #0xd0]
+	ldr r1, =0x00001105
+	str r1, [r0, #0xd8]
 	ldr r1, =0x00c3000a
 	str r1, [r0, #0xdc]
-	ldr r1, =0x00010000
+	ldr r1, =0x00020000
 	str r1, [r0, #0xe0]
 	ldr r1, =0x00110006
 	str r1, [r0, #0xe4]
@@ -478,7 +413,7 @@ TUNE_END:
 	str r1, [r0, #0x11c]
 	ldr r1, =0x00000202
 	str r1, [r0, #0x120]
-	ldr r1, =0x00600018
+	ldr r1, =0x20600018
 	str r1, [r0, #0x180]
 	ldr r1, =0x00e00100
 	str r1, [r0, #0x184]
@@ -493,15 +428,17 @@ TUNE_END:
 	ldr r1, =0x80100004
 	str r1, [r0, #0x1a8]
 
-	ldr r1, =0x00000016
+	ldr r1, =0x0000001f
 	str r1, [r0, #0x200]
-	ldr r1, =0x00090909
+	ldr r1, =0x00080808
 	str r1, [r0, #0x204]
-	ldr r1, =0x00000f00
+	ldr r1, =0x00000000
+	str r1, [r0, #0x20c]
+	ldr r1, =0x00000f0f
 	str r1, [r0, #0x210]
-	ldr r1, =0x08080808
+	ldr r1, =0x07070707
 	str r1, [r0, #0x214]
-	ldr r1, =0x0f0f0808
+	ldr r1, =0x0f070707
 	str r1, [r0, #0x218]
 
 	ldr r1, =0x06000600
@@ -523,25 +460,17 @@ TUNE_END:
 	str r1, [r0, #0x8]
 	ldr r1, =0x0007080c
 	str r1, [r0, #0x10]
-	imx7d_ddrphy_latency_setting
 	ldr r1, =0x1010007e
 	str r1, [r0, #0xb0]
 	ldr r1, =0x01010000
 	str r1, [r0, #0x1c]
-
-	ldr r2, =ANATOP_BASE_ADDR
-	ldr r3, [r2, #0x800]
-	and r3, r3, #0xFF
-	cmp r3, #0x11
-	bne	17f
-
-	ldr r1, =0x0db60d6e
+	ldr r1, =0x00000d6e
 	str r1, [r0, #0x9c]
-	b	18f
-17:
-	ldr r1, =0x00000b24
-	str r1, [r0, #0x9c]
-18:
+
+	/* Lars flavour of Steinars fix */
+	ldr r1, =0x00070206
+	str r1, [r0, #0x6c]
+
 	ldr r1, =0x06060606
 	str r1, [r0, #0x30]
 	ldr r1, =0x0a0a0a0a
@@ -650,7 +579,7 @@ wait_stat:
 .endm
 
 .macro imx7_ddr_setting
-	imx7d_12x12_lpddr3_arm2_setting
+	imx7d_zero_sugar_lpddr3_setting
 .endm
 
 /* include the common plugin code here */
