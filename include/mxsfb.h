@@ -22,6 +22,9 @@ void mxs_lcd_get_panel(struct display_panel *panel);
 void lcdif_power_down(void);
 int mxs_lcd_panel_setup(struct fb_videomode mode, int bpp,
 	uint32_t base_addr);
+
+int mxs_pan(int buf);
+
 #endif
 
 #endif				/* __MXSFB_H__ */

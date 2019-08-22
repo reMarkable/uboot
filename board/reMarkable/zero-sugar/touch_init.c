@@ -1,5 +1,3 @@
-#include "lcd_init.h"
-
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
 

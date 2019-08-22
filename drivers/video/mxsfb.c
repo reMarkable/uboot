@@ -35,6 +35,7 @@
 #endif
 
 #define	PS2KHZ(ps)	(1000000000UL / (ps))
+#define NUM_BUFS    4
 
 static GraphicDevice panel;
 struct mxs_dma_desc desc;
@@ -167,6 +168,9 @@ static void mxs_lcd_init(GraphicDevice *panel,
 	writel(panel->frameAdrs, &regs->hw_lcdif_cur_buf);
 	writel(panel->frameAdrs, &regs->hw_lcdif_next_buf);
 
+	/* Enable frame done irq */
+	writel(LCDIF_CTRL1_CUR_FRAME_DONE_IRQ_EN, &regs->hw_lcdif_ctrl1_set);
+
 	/* Flush FIFO first */
 	writel(LCDIF_CTRL1_FIFO_CLEAR, &regs->hw_lcdif_ctrl1_set);
 
@@ -180,6 +184,38 @@ static void mxs_lcd_init(GraphicDevice *panel,
 
 	/* RUN! */
 	writel(LCDIF_CTRL_RUN, &regs->hw_lcdif_ctrl_set);
+}
+
+int mxs_pan(int buf)
+{
+	struct mxs_lcdif_regs *regs = (struct mxs_lcdif_regs *)(ulong)(panel.isaBase);
+
+	const int frame_size = panel.plnSizeX * panel.plnSizeY * panel.gdfBytesPP;
+	unsigned int next_addr = panel.frameAdrs + buf * frame_size;
+	int timeout = 1000000;
+
+	// Set next pointer
+	writel(next_addr, &regs->hw_lcdif_next_buf);
+
+	// Wait until current frame is done
+	writel(LCDIF_CTRL1_CUR_FRAME_DONE_IRQ, &regs->hw_lcdif_ctrl1_clr);
+	while (--timeout) {
+		if (readl(&regs->hw_lcdif_ctrl1_reg) &
+				LCDIF_CTRL1_CUR_FRAME_DONE_IRQ) {
+			break;
+		}
+		udelay(1);
+	}
+
+	next_addr = panel.frameAdrs + (NUM_BUFS-1) * frame_size;
+	writel(next_addr, &regs->hw_lcdif_next_buf);
+
+	if (!timeout) {
+		printf("pan: timeout\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 void lcdif_power_down(void)
@@ -200,10 +236,14 @@ void lcdif_power_down(void)
 
 	writel(panel.frameAdrs, &regs->hw_lcdif_cur_buf_reg);
 	writel(panel.frameAdrs, &regs->hw_lcdif_next_buf_reg);
+
+	/* Enable vsync edge irq */
+	writel(LCDIF_CTRL1_VSYNC_EDGE_IRQ_EN, &regs->hw_lcdif_ctrl1_set);
+
 	writel(LCDIF_CTRL1_VSYNC_EDGE_IRQ, &regs->hw_lcdif_ctrl1_clr);
 	while (--timeout) {
 		if (readl(&regs->hw_lcdif_ctrl1_reg) &
-		    LCDIF_CTRL1_VSYNC_EDGE_IRQ)
+				LCDIF_CTRL1_VSYNC_EDGE_IRQ)
 			break;
 		udelay(1);
 	}
@@ -280,8 +320,7 @@ void *video_hw_init(void)
 		return NULL;
 	}
 
-	panel.memSize = mode.xres * mode.yres * panel.gdfBytesPP;
-
+	panel.memSize = NUM_BUFS * mode.xres * mode.yres * panel.gdfBytesPP;
 
 	/* Allocate framebuffer */
 	fb = memalign(ARCH_DMA_MINALIGN,

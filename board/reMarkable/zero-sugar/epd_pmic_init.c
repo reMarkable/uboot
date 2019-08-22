@@ -1,9 +1,9 @@
-#include "epd_init.h"
+#include "epd_pmic_init.h"
 
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
 #include <dm/uclass.h>
-
+#include <i2c.h>
 #include <linux/errno.h>
 
 #define SY7636A_I2C_BUS 3
@@ -18,6 +18,8 @@
 
 #define SY7636A_VCOMADJUST_LMASK 0xff
 #define SY7636A_VCOMADJUST_HMASK 0x80
+
+#define SY7636A_REG_THERMISTOR  0x08
 
 static int sy7636a_i2c_reg_write(struct udevice *dev, uint addr, uint mask, uint data)
 {
@@ -96,19 +98,68 @@ static int sy7636a_vcom_set(struct udevice *dev, int vcom)
 	return sy7636a_i2c_reg_write(dev, SY7636A_REG_VCOMADJUST_H, SY7636A_VCOMADJUST_HMASK, high);
 }
 
+static int sy7636a_thermistor_get(struct udevice *dev, int *temp)
+{
+	u8 value;
+	int ret;
+
+	ret = sy7636a_i2c_reg_read(dev, SY7636A_REG_THERMISTOR, &value);
+	if (ret)
+		return ret;
+
+	*temp = *((s8*)&value);
+
+	return 0;
+}
+
 int zs_do_config_epd_powerctrl_pins(void)
 {
-    printf("Configuring EPD PMIC I2C pullup..\n");
-    gpio_request(IMX_GPIO_NR(4, 22), "EPD_PMIC_I2C_PULLUP");
-    gpio_direction_output(IMX_GPIO_NR(4, 22), 1);
+	printf("Configuring EPD PMIC I2C pullup..\n");
+	gpio_request(IMX_GPIO_NR(4, 22), "EPD_PMIC_I2C_PULLUP");
+	gpio_direction_output(IMX_GPIO_NR(4, 22), 1);
 
-    printf("Configuring EPD PMIC LDO4VEN..\n");
-    gpio_request(IMX_GPIO_NR(7, 10), "PMIC_LDO4VEN");
-    gpio_direction_output(IMX_GPIO_NR(7, 10), 1);
+	printf("Configuring EPD PMIC LDO4VEN..\n");
+	gpio_request(IMX_GPIO_NR(7, 10), "PMIC_LDO4VEN");
+	gpio_direction_output(IMX_GPIO_NR(7, 10), 1);
 
-    printf("Configuring EPD PMIC powerup signal..\n");
-    gpio_request(IMX_GPIO_NR(7, 11), "EPD_PMIC_POWERUP");
-    gpio_direction_output(IMX_GPIO_NR(7, 11), 1);
+	printf("Configuring EPD PMIC powerup signal..\n");
+	gpio_request(IMX_GPIO_NR(7, 11), "EPD_PMIC_POWERUP");
+	gpio_direction_output(IMX_GPIO_NR(7, 11), 1);
+
+	return 0;
+}
+
+int zs_do_read_temp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	int temp, ret;
+	ret = epd_read_temp(&temp);
+	if (ret)
+		return ret;
+
+	printf("epd temperature: %d\n", temp);
+	return 0;
+}
+
+int epd_read_temp(int *temp)
+{
+	int ret;
+	struct udevice *bus, *dev;
+
+	ret = uclass_get_device_by_seq(UCLASS_I2C, SY7636A_I2C_BUS, &bus);
+	if (ret) {
+		printf("%s: No bus %d\n", __func__, SY7636A_I2C_BUS);
+		return -1;
+	}
+
+	ret = dm_i2c_probe(bus, SY7636A_I2C_ADDR, 0, &dev);
+	if (ret) {
+		printf("%s: Can't find device id=0x%x, on bus %d\n",
+				__func__, SY7636A_I2C_ADDR, SY7636A_I2C_BUS);
+		return -1;
+	}
+
+	/* Read thermistor value */
+	return sy7636a_thermistor_get(dev, temp);
 }
 
 int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
@@ -117,7 +168,6 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	u8 mask, val;
 	ulong vcom;
 	int ivcom;
-
 	int ret;
 
 	ret = uclass_get_device_by_seq(UCLASS_I2C, SY7636A_I2C_BUS, &bus);
@@ -129,10 +179,11 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	ret = dm_i2c_probe(bus, SY7636A_I2C_ADDR, 0, &dev);
 	if (ret) {
 		printf("%s: Can't find device id=0x%x, on bus %d\n",
-			__func__, SY7636A_I2C_ADDR, SY7636A_I2C_BUS);
+				__func__, SY7636A_I2C_ADDR, SY7636A_I2C_BUS);
 		return -1;
 	}
 
+	/* Read initial vcom value */
 	ret = sy7636a_vcom_get(dev, &ivcom);
 	if (ret)
 		return ret;
@@ -140,6 +191,7 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	vcom = env_get_ulong("vcom", 10, 1250);
 	printf("vcom was %dmV, setting to -%lumV\n", ivcom, vcom);
 
+	/* Set target vcom value */
 	ret = sy7636a_vcom_set(dev, vcom);
 	if (ret)
 		return ret;
@@ -152,7 +204,13 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 }
 
 U_BOOT_CMD(
-    epd_power_on,	1,	1,	zs_do_epd_power_on,
-	"Turn on power for eInk Display",
-	""
-);
+		epd_power_on,	1,	1,	zs_do_epd_power_on,
+		"Turn on power for eInk Display",
+		""
+		);
+
+U_BOOT_CMD(
+		epd_temp,	1,	1,	zs_do_read_temp,
+		"Read epd temperature",
+		""
+		);

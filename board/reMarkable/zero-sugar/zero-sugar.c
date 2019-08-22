@@ -10,8 +10,8 @@
 
 #include "wifi_init.h"
 #include "uart_init.h"
-#include "lcd_init.h"
-#include "epd_init.h"
+#include "epd_display_init.h"
+#include "epd_pmic_init.h"
 #include "touch_init.h"
 #include "digitizer_init.h"
 #include "charger_init.h"
@@ -63,14 +63,16 @@ static void power_perfs(void)
 	printk("Powering up peripherals\n");
     printf("----------------------------------------------\n");
 
-    /* Introduce a 1 sec delay before any powerup is done */
-    udelay(1000000);
-
     /* EPD */
     zs_do_config_epd_powerctrl_pins();
-    udelay(500000);
     zs_do_epd_power_on(NULL, 0, 0, NULL);
-    udelay(500000);
+    udelay(10000);
+
+    /* enable display and run init sequence */
+    epd_display_init();
+
+	// Shutdown LCDIF
+	lcdif_power_down();
 
     /* TOUCH */
     zs_do_config_touch_powerctrl_pins();
@@ -153,9 +155,17 @@ int board_late_init(void)
 	 */
 	clrsetbits_le16(&wdog->wcr, 0, 0x10);
 
-    init_charger();
+	init_charger();
+	probe_serial_download_trap();
+
+	/*
+	 * Enable icache and dcache: we need this to be able to show splash
+	 * screen.
+	 */
+	icache_enable();
+	dcache_enable();
+
 	power_perfs();
-    probe_serial_download_trap();
 
     /* Try to store console log so far to mmc 0:1 */
 //    printf("Initializing dummy buffer to be written to file ..\n");
@@ -169,5 +179,5 @@ int board_late_init(void)
 //        fat_fswrite_mem("uboot_console_log", &gd->console_out, 10);
 //    }
 
-	return 0;
+    return 0;
 }

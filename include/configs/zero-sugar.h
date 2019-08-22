@@ -117,7 +117,7 @@
 	"fdt_file=/boot/zero-sugar.dtb\0" \
 	"fdt_addr=0x83000000\0" \
 	"ip_dyn=yes\0" \
-	"panel=TFT43AB\0" \
+	"panel=EPD\0" \
 	"mmcdev=0\0" \
 	"active_partition=2\0" \
 	"fallback_partition=3\0 " \
