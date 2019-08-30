@@ -8,7 +8,6 @@
  *
  */
 
-#include "wifi_init.h"
 #include "uart_init.h"
 #include "epd_display_init.h"
 #include "epd_pmic_init.h"
@@ -81,10 +80,6 @@ static void power_perfs(void)
 	/* DIGITIZER */
     zs_do_config_digitizer_powerctrl_pins();
     udelay(1000000);
-
-    /* WIFI */
-    zs_do_wifi_poweron_cycle();
-    udelay(500000);
 }
 
 static int init_charger(void)

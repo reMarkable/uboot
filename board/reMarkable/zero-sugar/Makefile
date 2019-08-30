@@ -5,7 +5,6 @@
 
 obj-y  := zero-sugar.o \
           uart_init.o \
-          wifi_init.o \
           epd_pmic_init.o \
           epd_display_init.o \
           touch_init.o \
