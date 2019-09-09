@@ -83,37 +83,37 @@ static int init_charger(void)
     printf("Initiating charging parameters\n");
     ret = max77818_init_device();
     if (ret != 0)
-        return ret;
+	return ret;
 
     ret = max77818_enable_safeout1();
     if (ret != 0) {
-        printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
-        return ret;
+	printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
+	return ret;
     }
 
     printf("----------------------------------------------\n");
-    printf("Setting fast charge current: 2.8A\n");
-    ret = max77818_set_fast_charge_current_2800_ma(NULL);
+    printf("Setting fast charge current: 1.5A\n");
+    ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1_5MA);
     if (ret != 0)
-        return ret;
+	return ret;
 
     printf("----------------------------------------------\n");
-    printf("Setting pogo input current limit: 2.8A\n");
-    ret = max77818_set_pogo_input_current_limit(NULL);
+    printf("Setting pogo input current limit: 1.5A\n");
+    ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1_5MA);
     if (ret != 0)
-        return ret;
+	return ret;
 
     printf("----------------------------------------------\n");
     printf("Setting USB-C input current limit: 1.2A\n");
     ret = max77818_set_usbc_input_current_limit(NULL);
     if (ret != 0)
-        return ret;
+	return ret;
 
     printf("----------------------------------------------\n");
-    printf("Setting charge termination voltage: 3.4V\n");
-    ret = max77818_set_charge_termination_voltage(NULL);
+    printf("Setting normal charge mode\n");
+    ret = max77818_set_otg_pwr(NULL, false);
     if (ret != 0)
-        return ret;
+	return ret;
 
     return 0;
 }
