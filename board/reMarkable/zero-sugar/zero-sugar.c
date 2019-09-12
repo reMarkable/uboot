@@ -11,7 +11,6 @@
 #include "uart_init.h"
 #include "epd_display_init.h"
 #include "epd_pmic_init.h"
-#include "touch_init.h"
 #include "digitizer_init.h"
 #include "charger_init.h"
 #include "serial_download_trap.h"
@@ -72,10 +71,6 @@ static void power_perfs(void)
 
 	// Shutdown LCDIF
 	lcdif_power_down();
-
-    /* TOUCH */
-    zs_do_config_touch_powerctrl_pins();
-    udelay(500000);
 
 	/* DIGITIZER */
     zs_do_config_digitizer_powerctrl_pins();
