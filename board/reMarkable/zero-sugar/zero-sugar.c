@@ -74,7 +74,6 @@ static void power_perfs(void)
 
 	/* DIGITIZER */
     zs_do_config_digitizer_powerctrl_pins();
-    udelay(1000000);
 }
 
 static int init_charger(void)
