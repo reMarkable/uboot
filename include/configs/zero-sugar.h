@@ -166,12 +166,6 @@
 	"fi; " \
 	"run memboot; " \
 	"run mmcargs; " \
-	"gpio input 1;" \
-	"gpio set 11;" \
-	"gpio set 118;" \
-	"gpio set 202;" \
-	"gpio set 203;" \
-	"gpio set 6;" \
 	"setenv mmcpart ${active_partition}; " \
 	"run mmcboot; " \
 	"echo WARN: unable to boot from either RAM or eMMC; " \
