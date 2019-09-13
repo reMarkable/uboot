@@ -202,12 +202,6 @@
 #define CONFIG_BOOTCOUNT_ENV
 #endif
 
-#ifdef CONFIG_FSL_QSPI
-#define CONFIG_SYS_AUXCORE_BOOTDATA 0x60100000 /* Set to QSPI1 A flash, offset 1M */
-#else
-#define CONFIG_SYS_AUXCORE_BOOTDATA 0x7F8000 /* Set to TCML address */
-#endif
-
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 
 /* MMC Config*/
@@ -223,50 +217,7 @@
 
 #ifdef CONFIG_VIDEO
 #define CONFIG_VIDEO_MXS
-#define CONFIG_VIDEO_LOGO
-#define CONFIG_SPLASH_SCREEN
-#define CONFIG_SPLASH_SCREEN_ALIGN
-#define CONFIG_BMP_16BPP
-#define CONFIG_VIDEO_BMP_RLE8
-#define CONFIG_VIDEO_BMP_LOGO
 #define CONFIG_IMX_VIDEO_SKIP
-#endif
-
-/* #define CONFIG_SPLASH_SCREEN*/
-/* #define CONFIG_MXC_EPDC*/
-
-/*
- * SPLASH SCREEN Configs
- */
-#if defined(CONFIG_MXC_EPDC)
-/*
- * Framebuffer and LCD
- */
-#define CONFIG_CMD_BMP
-#define CONFIG_SPLASH_SCREEN
-
-#undef LCD_TEST_PATTERN
-/* #define CONFIG_SPLASH_IS_IN_MMC			1 */
-#define LCD_BPP					LCD_MONOCHROME
-/* #define CONFIG_SPLASH_SCREEN_ALIGN		1 */
-
-#define CONFIG_WAVEFORM_BUF_SIZE		0x400000
-#endif
-
-#if defined(CONFIG_MXC_EPDC) && defined(CONFIG_FSL_QSPI)
-#error "EPDC Pins conflicts QSPI, Either EPDC or QSPI can be enabled!"
-#endif
-
-#ifdef CONFIG_FSL_QSPI
-#define CONFIG_SYS_FSL_QSPI_AHB
-#define CONFIG_SF_DEFAULT_BUS		1 /* SOFT SPI occupies the BUS 0, so change the QSPI1 to BUS 1*/
-#define CONFIG_SF_DEFAULT_CS		0
-#define CONFIG_SF_DEFAULT_SPEED		40000000
-#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
-#define FSL_QSPI_FLASH_NUM		1
-#define FSL_QSPI_FLASH_SIZE		SZ_64M
-#define QSPI0_BASE_ADDR			QSPI1_IPS_BASE_ADDR
-#define QSPI0_AMBA_BASE			QSPI0_ARB_BASE_ADDR
 #endif
 
 #define CONFIG_USBD_HS
