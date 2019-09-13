@@ -136,7 +136,7 @@ int board_late_init(void)
 {
 	struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
 
-    imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
+	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
 	set_wdog_reset(wdog);
 	/*
 	 * Do not assert internal WDOG_RESET_B_DEB(controlled by bit 4),
@@ -156,17 +156,5 @@ int board_late_init(void)
 
 	power_perfs();
 
-    /* Try to store console log so far to mmc 0:1 */
-//    printf("Initializing dummy buffer to be written to file ..\n");
-
-//    struct membuff buf;
-//    membuff_new(&buf, 100);
-//    membuff_put(&buf, "This is a test !!!", 18);
-
-//    printf("Trying to write to mmc 0:1 /uboot_console_log ..\n");
-//    if(membuff_avail(&gd->console_out)) {
-//        fat_fswrite_mem("uboot_console_log", &gd->console_out, 10);
-//    }
-
-    return 0;
+	return 0;
 }
