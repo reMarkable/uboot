@@ -23,12 +23,6 @@
 	 "setenv mmcpart 2;" \
 	 "run loadimage;" \
 	 "run loadfdt;" \
-	 "gpio input 1;" \
-     "gpio set 11:" \
-	 "gpio set 118;" \
-	 "gpio set 202;" \
-	 "gpio set 203;" \
-     "gpio set 6;" \
 	 "bootz 0x82000000 - 0x88000000;" \
 	"\0" \
 
