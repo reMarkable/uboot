@@ -13,17 +13,19 @@
 #endif
 
 #define CONFIG_MFG_ENV_SETTINGS_DEFAULT \
-	"mfgtool_args=setenv bootargs console=${console},${baudrate} rootwait rw root=/dev/mmcblk2p2\0" \
-	"bootcmd_mfg=" \
-	 "run mfgtool_args;" \
-	 "setenv loadaddr 0x82000000;" \
-	 "setenv fdt_file /boot/zero-sugar.dtb;" \
-	 "setenv fdt_addr 0x88000000;" \
-	 "setenv mmcdev 0;" \
-	 "setenv mmcpart 2;" \
-	 "run loadimage;" \
-	 "run loadfdt;" \
-	 "bootz 0x82000000 - 0x88000000;" \
-	"\0" \
+	"mfgtool_args=setenv bootargs console=${console},${baudrate} " \
+		"rdinit=/linuxrc " \
+		"clk_ignore_unused "\
+		"\0" \
+	"bootcmd_mfg=run mfgtool_args;" \
+        "if iminfo ${initrd_addr}; then " \
+            "if test ${tee} = yes; then " \
+                "bootm ${tee_addr} ${initrd_addr} ${fdt_addr}; " \
+            "else " \
+                MFG_BOOT_CMD "${loadaddr} ${initrd_addr} ${fdt_addr}; " \
+            "fi; " \
+        "else " \
+            "echo \"Run fastboot ...\"; fastboot 0; "  \
+        "fi;\0" \
 
 #endif

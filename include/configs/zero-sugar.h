@@ -11,7 +11,6 @@
 #define __ZEROSUGAR_CONFIG_H
 
 #include "mx7_common.h"
-#include "imx_env.h"
 
 #define CONFIG_SYS_DCACHE_OFF
 
@@ -86,23 +85,26 @@
 #define UPDATE_M4_ENV ""
 #endif
 
-#ifdef CONFIG_NAND_BOOT
-#define MFG_NAND_PARTITION "mtdparts=gpmi-nand:64m(nandboot),16m(nandkernel),16m(nanddtb),16m(nandtee),-(nandrootfs) "
-#else
-#define MFG_NAND_PARTITION ""
-#endif
-
 #define CONFIG_CMD_READ
 #define CONFIG_SERIAL_TAG
 #define CONFIG_FASTBOOT_USB_DEV 0
 
 #define CONFIG_MFG_ENV_SETTINGS \
-	CONFIG_MFG_ENV_SETTINGS_DEFAULT \
+	"mfgtool_args=setenv bootargs console=${console},${baudrate} rootwait rw root=/dev/mmcblk2p2\0" \
+	"bootcmd_mfg=" \
+	"run mfgtool_args;" \
+	"setenv loadaddr 0x82000000;" \
+	"setenv fdt_file /boot/zero-sugar.dtb;" \
+	"setenv fdt_addr 0x88000000;" \
+	"setenv mmcdev 0;" \
+	"setenv mmcpart 2;" \
+	"run loadimage;" \
+	"run loadfdt;" \
+	"bootz 0x82000000 - 0x88000000;" \
 	"initrd_addr=0x83800000\0" \
 	"initrd_high=0xffffffff\0" \
 	"emmc_dev=1\0"\
 	"sd_dev=0\0" \
-	"mtdparts=" MFG_NAND_PARTITION \
 	"\0"\
 
 #define CONFIG_DFU_ENV_SETTINGS \
