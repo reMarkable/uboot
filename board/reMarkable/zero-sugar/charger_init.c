@@ -422,8 +422,10 @@ int max77818_enable_safeout1(void)
 	return dm_i2c_write(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
 }
 
-static int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp, int flag, int argc,
-				    char * const argv[])
+static int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp,
+					   int flag,
+					   int argc,
+					   char * const argv[])
 {
 	int ret;
 
@@ -471,7 +473,10 @@ U_BOOT_CMD(
 	"Read battery detection status, USB-C voltage status and POGO input voltage status"
 );
 
-static int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp,
+			     int flag,
+			     int argc,
+			     char * const argv[])
 {
 	int ret;
 
@@ -514,8 +519,10 @@ U_BOOT_CMD(
 	"Turn off charging, and enable OTG power output to connected device"
 );
 
-static int zs_do_set_fastcharge_current_1P5_A(cmd_tbl_t *cmdtp, int flag, int argc,
-					 char * const argv[])
+static int zs_do_set_fastcharge_current_1P5_A(cmd_tbl_t *cmdtp,
+					      int flag,
+					      int argc,
+					      char * const argv[])
 {
 	int ret;
 
@@ -544,8 +551,10 @@ U_BOOT_CMD(
 	"Set fastcharge current to 1.5A for the pogo pin charge input"
 );
 
-static int zs_do_set_fastcharge_current_2P8_A(cmd_tbl_t *cmdtp, int flag, int argc,
-					 char * const argv[])
+static int zs_do_set_fastcharge_current_2P8_A(cmd_tbl_t *cmdtp,
+					      int flag,
+					      int argc,
+					      char * const argv[])
 {
 	int ret;
 
@@ -574,8 +583,10 @@ U_BOOT_CMD(
 	"Set fastcharge current to 2.8A for the pogo pin charge input"
 );
 
-static int zs_do_set_charge_termination_voltage(cmd_tbl_t *cmdtp, int flag, int argc,
-					 char * const argv[])
+static int zs_do_set_charge_termination_voltage(cmd_tbl_t *cmdtp,
+						int flag,
+						int argc,
+						char * const argv[])
 {
 	int ret;
 
@@ -604,8 +615,10 @@ U_BOOT_CMD(
 	"Set charge termination voltage to 3.4V"
 );
 
-static int zs_do_set_pogo_input_current_limit_1P5_A(cmd_tbl_t *cmdtp, int flag,
-					       int argc, char * const argv[])
+static int zs_do_set_pogo_input_current_limit_1P5_A(cmd_tbl_t *cmdtp,
+						    int flag,
+						    int argc,
+						    char * const argv[])
 {
 	int ret;
 
@@ -634,8 +647,10 @@ U_BOOT_CMD(
 	"Set max charge input current limit to 1.5A for the pogo pin charge input"
 );
 
-static int zs_do_set_pogo_input_current_limit_2P8_A(cmd_tbl_t *cmdtp, int flag,
-					       int argc, char * const argv[])
+static int zs_do_set_pogo_input_current_limit_2P8_A(cmd_tbl_t *cmdtp,
+						    int flag,
+						    int argc,
+						    char * const argv[])
 {
 	int ret;
 
@@ -664,8 +679,10 @@ U_BOOT_CMD(
 	"Set max charge input current limit to 2.8A for the pogo pin charge input"
 );
 
-static int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp, int flag, int argc,
-				       char * const argv[])
+static int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp,
+					      int flag,
+					      int argc,
+					      char * const argv[])
 {
 	int ret;
 
