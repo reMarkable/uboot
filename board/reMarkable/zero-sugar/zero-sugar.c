@@ -93,13 +93,13 @@ static int init_charger(void)
 
     printf("----------------------------------------------\n");
     printf("Setting fast charge current: 1.5A\n");
-    ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1_5MA);
+    ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
     if (ret != 0)
 	return ret;
 
     printf("----------------------------------------------\n");
     printf("Setting pogo input current limit: 1.5A\n");
-    ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1_5MA);
+    ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
     if (ret != 0)
 	return ret;
 
