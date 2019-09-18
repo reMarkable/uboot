@@ -57,65 +57,58 @@ static iomux_v3_cfg_t const wdog_pads[] = {
 
 static void power_perfs(void)
 {
-    printf("\n----------------------------------------------\n");
 	printk("Powering up peripherals\n");
-    printf("----------------------------------------------\n");
 
-    /* EPD */
-    zs_do_config_epd_powerctrl_pins();
-    zs_do_epd_power_on(NULL, 0, 0, NULL);
-    udelay(10000);
+	/* EPD */
+	zs_do_config_epd_powerctrl_pins();
+	zs_do_epd_power_on(NULL, 0, 0, NULL);
+	udelay(10000);
 
-    /* enable display and run init sequence */
-    epd_display_init();
+	/* enable display and run init sequence */
+	epd_display_init();
 
 	// Shutdown LCDIF
 	lcdif_power_down();
 
 	/* DIGITIZER */
-    zs_do_config_digitizer_powerctrl_pins();
+	zs_do_config_digitizer_powerctrl_pins();
 }
 
 static int init_charger(void)
 {
-    int ret;
-    printf("----------------------------------------------\n");
-    printf("Initiating charging parameters\n");
-    ret = max77818_init_device();
-    if (ret != 0)
-	return ret;
+	int ret;
+	printf("Initiating charging parameters\n");
+	ret = max77818_init_device();
+	if (ret != 0)
+		return ret;
 
-    ret = max77818_enable_safeout1();
-    if (ret != 0) {
-	printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
-	return ret;
-    }
+	ret = max77818_enable_safeout1();
+	if (ret != 0) {
+		printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
+		return ret;
+	}
 
-    printf("----------------------------------------------\n");
-    printf("Setting fast charge current: 1.5A\n");
-    ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
-    if (ret != 0)
-	return ret;
+	printf("Setting fast charge current: 1.5A\n");
+	ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
+	if (ret != 0)
+		return ret;
 
-    printf("----------------------------------------------\n");
-    printf("Setting pogo input current limit: 1.5A\n");
-    ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
-    if (ret != 0)
-	return ret;
+	printf("Setting pogo input current limit: 1.5A\n");
+	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
+	if (ret != 0)
+		return ret;
 
-    printf("----------------------------------------------\n");
-    printf("Setting USB-C input current limit: 1.2A\n");
-    ret = max77818_set_usbc_input_current_limit(NULL);
-    if (ret != 0)
-	return ret;
+	printf("Setting USB-C input current limit: 1.2A\n");
+	ret = max77818_set_usbc_input_current_limit(NULL);
+	if (ret != 0)
+		return ret;
 
-    printf("----------------------------------------------\n");
-    printf("Setting normal charge mode\n");
-    ret = max77818_set_otg_pwr(NULL, false);
-    if (ret != 0)
-	return ret;
+	printf("Setting normal charge mode\n");
+	ret = max77818_set_otg_pwr(NULL, false);
+	if (ret != 0)
+		return ret;
 
-    return 0;
+	return 0;
 }
 
 int board_early_init_f(void)
