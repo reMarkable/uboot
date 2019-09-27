@@ -82,7 +82,7 @@
 
 	/* restore DDRC */
 	ldr	r6, =0x0
-	ldr	r7, =0x01040008
+	ldr	r7, =0x03040008
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x1a0
@@ -130,7 +130,7 @@
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x104
-	ldr	r7, =0x00020211
+	ldr	r7, =0x00020210
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x108
@@ -142,7 +142,7 @@
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x110
-	ldr	r7, =0x05020307
+	ldr	r7, =0x05020306
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x114
@@ -178,7 +178,7 @@
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x200
-	ldr	r7, =0x0000001f
+	ldr	r7, =0x00000016
 	str	r7, [r3, r6]
 
 	ldr	r6, =0x204
@@ -381,7 +381,7 @@
 	str r1, [r0, r2]
 
 	ldr r0, =DDRC_IPS_BASE_ADDR
-	ldr r1, =0x01040008
+	ldr r1, =0x03040008
 	str r1, [r0]
 	ldr r1, =0x00200038
 	str r1, [r0, #0x64]
@@ -401,13 +401,13 @@
 	str r1, [r0, #0xf4]
 	ldr r1, =0x0a0e110b
 	str r1, [r0, #0x100]
-	ldr r1, =0x00020211
+	ldr r1, =0x00020210
 	str r1, [r0, #0x104]
 	ldr r1, =0x03060708
 	str r1, [r0, #0x108]
 	ldr r1, =0x00a0500c
 	str r1, [r0, #0x10c]
-	ldr r1, =0x05020307
+	ldr r1, =0x05020306
 	str r1, [r0, #0x110]
 	ldr r1, =0x02020404
 	str r1, [r0, #0x114]
@@ -432,7 +432,7 @@
 	ldr r1, =0x80100004
 	str r1, [r0, #0x1a8]
 
-	ldr r1, =0x0000001f
+	ldr r1, =0x00000016
 	str r1, [r0, #0x200]
 	ldr r1, =0x00080808
 	str r1, [r0, #0x204]
