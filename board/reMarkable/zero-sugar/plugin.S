@@ -105,6 +105,10 @@
 	ldr	r7, =0xc0350001
 	str	r7, [r3, r6]
 
+	ldr	r6, =0xd8
+	ldr	r7, =0x00001105
+	str	r7, [r3, r6]
+
 	ldr	r6, =0xdc
 	ldr	r7, =0x00C3000A
 	str	r7, [r3, r6]
