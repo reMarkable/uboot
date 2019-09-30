@@ -432,8 +432,6 @@
 	str r1, [r0, #0x200]
 	ldr r1, =0x00080808
 	str r1, [r0, #0x204]
-	ldr r1, =0x00000000
-	str r1, [r0, #0x20c]
 	ldr r1, =0x00000f0f
 	str r1, [r0, #0x210]
 	ldr r1, =0x07070707
