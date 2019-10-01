@@ -97,7 +97,7 @@ static int splash_init(void)
 	// Load main.gz to 0x1C000000
 	const char *filename = "zplash";
 	const u32 max_inflated_size = 100*1024;
-	void *addr = (void*)0xC1000000;
+	void *addr = (void*)0x80300000;
 
 	// Check if it exists
 	if (!fat_exists(filename)) {
