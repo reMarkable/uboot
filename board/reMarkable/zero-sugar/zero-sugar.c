@@ -149,5 +149,11 @@ int board_late_init(void)
 
 	power_perfs();
 
+	/*
+	 * To wake up i.MX7D from LPSR state using GPIO1/2, bit 7 of SNVS
+	 * register at offset 0x48 needs to be set.
+	 */
+	setbits_le32(SNVS_BASE_ADDR + 0x48, BIT(7));
+
 	return 0;
 }
