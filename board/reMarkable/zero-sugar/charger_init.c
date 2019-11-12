@@ -141,6 +141,8 @@ int max77818_init_device()
 
 	ret = uclass_get_device_by_seq(UCLASS_I2C, MAX77818_I2C_BUS, &bus);
 	if (ret) {
+		printf("%s: Can't find I2C bus %d (expected for MAX77818)\n",
+		       __func__, MAX77818_I2C_BUS);
 		return -1;
 	}
 
@@ -155,7 +157,6 @@ int max77818_init_device()
 	if (ret) {
 		printf("%s: Can't find device id=0x%x, on bus %d\n",
 		__func__, MAX77818_CHARGER_I2C_ADDR, MAX77818_I2C_BUS);
-		return -1;
 	}
 
 	ret = dm_i2c_probe(bus, MAX77818_FG_I2C_ADDR, 0, &fgDev);

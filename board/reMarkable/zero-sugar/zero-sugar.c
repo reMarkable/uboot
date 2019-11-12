@@ -82,31 +82,36 @@ static int init_charger(void)
 	if (ret != 0)
 		return ret;
 
+	printf("Enabling SAFEOUT1\n");
 	ret = max77818_enable_safeout1();
 	if (ret != 0) {
-		printf("failed to enable SAFEOUT1 regulator: %d\n", ret);
-		return ret;
+		printf("%s: Failed to enable SAFEOUT1 regulator: %d\n",
+		       __func__, ret);
 	}
 
-	printf("Setting fast charge current: 1.5A\n");
+	printf("Trying to set fast charge current: 1.5A\n");
 	ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
 	if (ret != 0)
-		return ret;
+		printf("%s Failed to set fast charger current\n",
+		       __func__);
 
-	printf("Setting pogo input current limit: 1.5A\n");
+	printf("Trying to set pogo input current limit: 1.5A\n");
 	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
 	if (ret != 0)
-		return ret;
+		printf("%s: Failed to set pogo input current limit\n",
+		       __func__);
 
-	printf("Setting USB-C input current limit: 1.2A\n");
+	printf("Trying to set USB-C input current limit: 1.2A\n");
 	ret = max77818_set_usbc_input_current_limit(NULL);
 	if (ret != 0)
-		return ret;
+		printf("%s: Failed to set USB-C input current limit\n",
+		       __func__);
 
-	printf("Setting normal charge mode\n");
+	printf("Tryint to set normal charge mode (turn off OTG mode if set)\n");
 	ret = max77818_set_otg_pwr(NULL, false);
 	if (ret != 0)
-		return ret;
+		printf("%s: Failed to set normal charge mode\n",
+		       __func__);
 
 	return 0;
 }
