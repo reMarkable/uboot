@@ -6,6 +6,9 @@
 #include <i2c.h>
 #include <linux/errno.h>
 
+#include <malloc.h>
+#include <mmc.h>
+
 #define SY7636A_I2C_BUS 3
 #define SY7636A_I2C_ADDR 0x62
 
@@ -162,6 +165,126 @@ int epd_read_temp(int *temp)
 	return sy7636a_thermistor_get(dev, temp);
 }
 
+static struct mmc *mmc_set_part_dev(int dev, int part)
+{
+	int ret;
+	struct mmc *mmc = find_mmc_device(dev);
+	if (!mmc) {
+		printf("%s: no mmc device at slot %x\n", __func__, dev);
+		return NULL;
+	}
+	mmc->has_init = 0;
+
+	if (mmc_init(mmc)) {
+		printf("%s: Unable to initialize mmc\n", __func__);
+		return NULL;
+	}
+
+	ret = blk_select_hwpart_devnum(IF_TYPE_MMC, dev, part);
+	if (ret) {
+		printf("%s: Unable to switch partition, returned %d\n", __func__, ret);
+		return NULL;
+	}
+
+	return mmc;
+}
+
+#define EPDIDVCOM_INDEX 3
+#define EPDIDVCOM_LEN 25
+#define VCOM_LEN 5
+#define MAX_SERIAL_LEN 40
+
+static int read_vcom_from_mmc(int dev, int part, ulong *vcom)
+{
+	struct mmc *mmc;
+	u32 n, i, size;
+	char *buffer;
+	char *src;
+	char serial[EPDIDVCOM_LEN + 1] = {0};
+	int ret;
+
+	const u32 blk_cnt = 1;
+
+	mmc = mmc_set_part_dev(dev, part);
+	if (!mmc)
+		return -1;
+
+	buffer = (char*)malloc(512);
+	if (!buffer) {
+		printf("%s: Unable to allocate memory\n", __func__);
+		return -1;
+	}
+
+	n = blk_dread(mmc_get_blk_desc(mmc), 0, blk_cnt, buffer);
+	if (n != blk_cnt) {
+		printf("%s: MMC read failed\n", __func__);
+		ret = -1;
+		goto free_buf;
+	}
+
+	src = buffer;
+	size = 0;
+	for (i = 0; i < EPDIDVCOM_INDEX + 1; i++) {
+		src += size;
+		size = ((u32)src[0] << 24) |
+				((u32)src[1] << 16) |
+				((u32)src[2] << 8) |
+				((u32)src[3]);
+		if (size > MAX_SERIAL_LEN) {
+			printf("%s: Invalid size value read from MMC, giving up\n", __func__);
+			ret = -1;
+			goto free_buf;
+		}
+		src += sizeof(u32);
+	}
+
+	if (size != EPDIDVCOM_LEN) {
+		printf("%s: Invalid EPD serial + vcom size\n", __func__);
+		ret = -1;
+		goto free_buf;
+	}
+
+	strncpy(serial, src, EPDIDVCOM_LEN - VCOM_LEN - 1);
+	printf("EPD serial: \"%s\"\n", serial);
+
+	src += (EPDIDVCOM_LEN - VCOM_LEN);
+
+	if ((src[0] != '-') ||
+		(src[1] < '0' || src[1] > '5') ||
+		(src[2] != '.') ||
+		(src[3] < '0' || src[3] > '9') ||
+		(src[4] < '0' || src[4] > '9') ) {
+		printf("%s: Invalid vcom value\n", __func__);
+		ret = -1;
+		goto free_buf;
+	}
+
+	*vcom = (src[1] - '0') * 1000 +
+			(src[3] - '0') * 100 +
+			(src[4] - '0') * 10;
+
+	printf("EPD vcom: -%lumV\n", *vcom);
+
+	ret = 0;
+
+free_buf:
+	free(buffer);
+
+	return ret;
+}
+
+static int zs_do_read_vcom_from_mmc(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	ulong vcom;
+	return read_vcom_from_mmc(0, 2, &vcom);
+}
+
+U_BOOT_CMD(
+		epd_vcom_mmc,	1,	1,	zs_do_read_vcom_from_mmc,
+		"Read vcom from mmc",
+		""
+		);
+
 int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct udevice *bus, *dev;
@@ -183,13 +306,28 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 		return -1;
 	}
 
-	/* Read initial vcom value */
+	/* Read vcom value from chip */
 	ret = sy7636a_vcom_get(dev, &ivcom);
 	if (ret)
 		return ret;
 
-	vcom = env_get_ulong("vcom", 10, 1250);
-	printf("vcom was %dmV, setting to -%lumV\n", ivcom, vcom);
+	vcom = env_get_ulong("vcom", 10, 9999);
+
+	if (vcom == 9999) {
+		printf("vcom not found in environment, reading from mmc\n");
+		ret = read_vcom_from_mmc(0, 2, &vcom);
+		if (ret == 0) {
+			env_set_ulong("vcom", vcom);
+			mmc_set_part_dev(0, 0);
+			env_save();
+		} else {
+			printf("Unable to read vcom from mmc, using default\n");
+			vcom = 1250;
+		}
+	}
+
+	printf("Chip reported vcom %dmV"
+			", setting to -%lumV\n", ivcom, vcom);
 
 	/* Set target vcom value */
 	ret = sy7636a_vcom_set(dev, vcom);
