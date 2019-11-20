@@ -1,5 +1,6 @@
 #include "epd_display_init.h"
 #include "epd_pmic_init.h"
+#include "mmc_tools.h"
 
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/iomux-v3.h>
@@ -10,7 +11,6 @@
 #include <stdlib.h>
 #include <fat.h>
 #include <memalign.h>
-#include <mmc.h>
 
 static int epd_splash(void);
 static int splash_init(void);
@@ -92,32 +92,6 @@ struct splash_functions {
 	int (*init_tbl)(const uint8_t**);
 	int (*blit_gc)(uint32_t*, const uint8_t*, int, int, int, int, int);
 }splash;
-
-static bool mmc_set_dev_part(int dev, int part)
-{
-	struct mmc *mmc;
-	int ret;
-
-	mmc = find_mmc_device(dev);
-	if (!mmc) {
-		printf("%s: no mmc device at slot %x\n", __func__, dev);
-		return false;
-	}
-	mmc->has_init = 0;
-
-	if (mmc_init(mmc)) {
-		printf("%s: Unable to initialize mmc\n", __func__);
-		return false;
-	}
-
-	ret = blk_select_hwpart_devnum(IF_TYPE_MMC, dev, part);
-	if (ret) {
-		printf("%s: Unable to switch partition, returned %d\n", __func__, ret);
-		return false;
-	}
-
-	return true;
-}
 
 static int splash_init(void)
 {

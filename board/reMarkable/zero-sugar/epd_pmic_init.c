@@ -1,4 +1,5 @@
 #include "epd_pmic_init.h"
+#include "mmc_tools.h"
 
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
@@ -7,6 +8,7 @@
 #include <linux/errno.h>
 
 #include <malloc.h>
+#include <environment.h>
 #include <mmc.h>
 
 #define SY7636A_I2C_BUS 3
@@ -165,30 +167,6 @@ int epd_read_temp(int *temp)
 	return sy7636a_thermistor_get(dev, temp);
 }
 
-static struct mmc *mmc_set_part_dev(int dev, int part)
-{
-	int ret;
-	struct mmc *mmc = find_mmc_device(dev);
-	if (!mmc) {
-		printf("%s: no mmc device at slot %x\n", __func__, dev);
-		return NULL;
-	}
-	mmc->has_init = 0;
-
-	if (mmc_init(mmc)) {
-		printf("%s: Unable to initialize mmc\n", __func__);
-		return NULL;
-	}
-
-	ret = blk_select_hwpart_devnum(IF_TYPE_MMC, dev, part);
-	if (ret) {
-		printf("%s: Unable to switch partition, returned %d\n", __func__, ret);
-		return NULL;
-	}
-
-	return mmc;
-}
-
 #define EPDIDVCOM_INDEX 3
 #define EPDIDVCOM_LEN 25
 #define VCOM_LEN 5
@@ -205,14 +183,15 @@ static int read_vcom_from_mmc(int dev, int part, ulong *vcom)
 
 	const u32 blk_cnt = 1;
 
-	mmc = mmc_set_part_dev(dev, part);
+	mmc = mmc_set_dev_part(dev, part);
 	if (!mmc)
 		return -1;
 
 	buffer = (char*)malloc(512);
 	if (!buffer) {
 		printf("%s: Unable to allocate memory\n", __func__);
-		return -1;
+		ret = -1;
+		goto reset_mmc;
 	}
 
 	n = blk_dread(mmc_get_blk_desc(mmc), 0, blk_cnt, buffer);
@@ -269,6 +248,8 @@ static int read_vcom_from_mmc(int dev, int part, ulong *vcom)
 
 free_buf:
 	free(buffer);
+reset_mmc:
+	mmc_reset();
 
 	return ret;
 }
@@ -318,7 +299,6 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 		ret = read_vcom_from_mmc(0, 2, &vcom);
 		if (ret == 0) {
 			env_set_ulong("vcom", vcom);
-			mmc_set_part_dev(0, 0);
 			env_save();
 		} else {
 			printf("Unable to read vcom from mmc, using default\n");
