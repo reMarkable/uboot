@@ -18,6 +18,11 @@
 #define MAX77818_REG_SAFEOUTCTRL					0xC6
 #define MAX77818_SAFEOUTCTRL_ENSAFEOUT1					BIT(6)
 
+#define MAX77818_REG_FG_CONFIG						0x1D
+#define MAX77818_FG_CONFIG__FGCC_MASK					0x0800
+#define MAX77818_FG_CONFIG__FGCC_ENABLED				0x0800
+#define MAX77818_FG_CONFIG__FGCC_DISABLED				0x0000
+
 #define MAX77818_REG_DETAILS_0						0xB3
 #define MAX77818_DETAILS_0__BAT_DET_MASK				0x01
 #define MAX77818_DETAILS_0__BAT_DET_SHIFT				0x00
@@ -72,11 +77,81 @@
 #define MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A				0x3F
 
 static struct udevice *bus = NULL, *idDev = NULL, *chDev = NULL, *fgDev = NULL;
+static bool fgcc_restore_state = 0;
 
-static int max77818_i2c_reg_write(struct udevice *dev,
-				  uint addr,
-				  uint mask,
-				  uint data)
+static int max77818_i2c_reg_read16(struct udevice *dev,
+				   u8 addr,
+				   u16 *data);
+
+static int max77818_i2c_reg_write16(struct udevice *dev,
+				    u8 addr,
+				    u16 mask,
+				    u16 data)
+{
+	int ret;
+	u8 val[2];
+	u16 finalVal;
+	u16 maskedVal;
+	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
+
+	ret = dm_i2c_read(dev, addr, val, 2);
+	if (ret) {
+		printf("%s: Failed to read from addr 0x%02x/dev 0x%02x: %d\n",
+		       __func__,
+		       addr,
+		       chip->chip_addr,
+		       ret);
+		return ret;
+	} else {
+		finalVal = val[0] | ((u16)val[1] << 8);
+	}
+
+	maskedVal = data & mask;
+	finalVal &= ~mask;
+	finalVal |= maskedVal;
+	val[0] = finalVal & 0xff;
+	val[1] = (finalVal >> 8) & 0xff;
+
+	ret = dm_i2c_write(dev, addr, val, 2);
+	if (ret) {
+		printf("%s: Failed to write to addr 0x%02x/dev 0x%02x: %d\n",
+		       __func__,
+		       addr,
+		       chip->chip_addr,
+		       ret);
+	}
+
+	return 0;
+}
+
+static int max77818_i2c_reg_read16(struct udevice *dev,
+				   u8 addr,
+				   u16 *data)
+{
+	int ret;
+	u8 val[2];
+	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
+
+	ret = dm_i2c_read(fgDev, addr, val, 2);
+	if (ret) {
+		printf("%s: Failed to read from addr 0x%02x/dev 0x%02x: %d\n",
+		       __func__,
+		       addr,
+		       chip->chip_addr,
+		       ret);
+		return ret;
+	} else {
+		*data = val[0] | ((u16)val[1] << 8);
+	}
+
+	return 0;
+}
+
+
+static int max77818_i2c_reg_write8(struct udevice *dev,
+				  u8 addr,
+				  u8 mask,
+				  u8 data)
 {
 	u8 valb;
 	int ret;
@@ -100,9 +175,9 @@ static int max77818_set_reg_lock(struct udevice *dev, bool locked)
 	u8 regVal;
 
 	regVal = (locked ? MAX77818_CHGPROT__LOCK : MAX77818_CHGPROT__UNLOCK);
-	return max77818_i2c_reg_write(dev,
-				      MAX77818_REG_CHGPROT,
-				      MAX77818_CHGPROT__MASK, regVal);
+	return max77818_i2c_reg_write8(dev,
+				       MAX77818_REG_CHGPROT,
+				       MAX77818_CHGPROT__MASK, regVal);
 }
 
 static int max77818_get_details_1(struct udevice *dev)
@@ -135,7 +210,7 @@ static int max77818_get_details_2(struct udevice *dev)
 	return 0;
 }
 
-int max77818_init_device()
+int max77818_init_device(void)
 {
 	int ret;
 
@@ -153,17 +228,92 @@ int max77818_init_device()
 		return -1;
 	}
 
-	ret = dm_i2c_probe(bus, MAX77818_CHARGER_I2C_ADDR, 0, &chDev);
-	if (ret) {
-		printf("%s: Can't find device id=0x%x, on bus %d\n",
-		__func__, MAX77818_CHARGER_I2C_ADDR, MAX77818_I2C_BUS);
-	}
-
 	ret = dm_i2c_probe(bus, MAX77818_FG_I2C_ADDR, 0, &fgDev);
 	if (ret) {
 		printf("%s: Can't find device id=0x%x, on bus %d\n",
 		__func__, MAX77818_FG_I2C_ADDR, MAX77818_I2C_BUS);
 		return -1;
+	}
+
+	/* Read current FGCC state to be restored after config */
+	printf("%s: Reading current FGCC state to be restored\n",
+	       __func__);
+	ret = max77818_read_fgcc_state(&fgcc_restore_state);
+	if (ret) {
+		printf("%s: Unable to read current FGCC state,"
+		       "assuming FGCC should be configured\n",
+		       __func__);
+		fgcc_restore_state = true;
+	}
+
+	/* Turn off FGCC in order to do required charger config, if enabled */
+	if (fgcc_restore_state) {
+		printf("Turning off FGCC in order to do minimal charger config\n");
+		ret = max77818_enable_fgcc(false);
+		if (ret) {
+			printf("%s: Failed to disable FGCC mode: %d\n",
+			       __func__,
+			       ret);
+			return -1;
+		}
+
+		mdelay(100);
+	}
+	else {
+		printf("FGCC currently not configured, no need to disable\n");
+	}
+
+	ret = dm_i2c_probe(bus, MAX77818_CHARGER_I2C_ADDR, 0, &chDev);
+	if (ret) {
+		printf("%s: Can't find device id=0x%x, on bus %d\n",
+		__func__, MAX77818_CHARGER_I2C_ADDR, MAX77818_I2C_BUS);
+	}
+	return 0;
+}
+
+int max77818_read_fgcc_state(bool *state)
+{
+	int ret;
+	u16 value;
+
+	ret = max77818_i2c_reg_read16(fgDev,
+				      MAX77818_REG_FG_CONFIG,
+				      &value);
+	if (ret) {
+		printf("%s: Failed to read current FGCC state\n", __func__);
+		return ret;
+	}
+	value &= MAX77818_FG_CONFIG__FGCC_MASK;
+	*state = (value == MAX77818_FG_CONFIG__FGCC_ENABLED);
+
+	return 0;
+}
+
+int max77818_restore_fgcc(void)
+{
+	if (fgcc_restore_state) {
+		printf("Restoring FGCC state (re-enabling)\n");
+		return max77818_enable_fgcc(true);
+	}
+	else {
+		printf("FGCC state not to be enabled (was disabled)\n");
+		return 0;
+	}
+}
+int max77818_enable_fgcc(bool enabled)
+{
+	int ret;
+	u16 value;
+
+	value = (enabled ? MAX77818_FG_CONFIG__FGCC_ENABLED :
+			   MAX77818_FG_CONFIG__FGCC_DISABLED);
+
+	ret = max77818_i2c_reg_write16(fgDev, MAX77818_REG_FG_CONFIG,
+				       MAX77818_FG_CONFIG__FGCC_MASK,
+				       value);
+	if (ret) {
+		printf("%s: Failed to write FGCC mode\n", __func__);
+		return ret;
 	}
 
 	return 0;
@@ -295,8 +445,8 @@ int max77818_set_otg_pwr(struct udevice *dev, bool otg_on)
 		  MAX77818_CHG_CNFG_0__MODE__OTG_BOOST_BUCK_ON :
 		  MAX77818_CHG_CNFG_0__MODE__CHARGER_BUCK_O);
 
-	return max77818_i2c_reg_write(dev, MAX77818_REG_CHG_CNFG_0,
-				      MAX77818_CHG_CNFG_0__MODE__MASK, regVal);
+	return max77818_i2c_reg_write8(dev, MAX77818_REG_CHG_CNFG_0,
+				       MAX77818_CHG_CNFG_0__MODE__MASK, regVal);
 }
 
 int max77818_set_fast_charge_current(struct udevice *dev,
@@ -328,10 +478,10 @@ int max77818_set_fast_charge_current(struct udevice *dev,
 			MAX77818_CHG_CNFG_02__CHARGE_CC__FAST_CHARGE_1P5_A;
 	}
 
-	ret = max77818_i2c_reg_write(dev,
-				 MAX77818_REG_CHG_CNFG_02,
-				 MAX77818_CHG_CNFG_02__CHARGE_CC__MASK,
-				 fc_config_value);
+	ret = max77818_i2c_reg_write8(dev,
+				      MAX77818_REG_CHG_CNFG_02,
+				      MAX77818_CHG_CNFG_02__CHARGE_CC__MASK,
+				      fc_config_value);
 	if (ret)
 		return ret;
 
@@ -350,17 +500,17 @@ int max77818_set_charge_termination_voltage(struct udevice *dev)
 	if (ret)
 		return ret;
 
-	ret = max77818_i2c_reg_write(dev,
-				     MAX77818_REG_CHG_CNFG_04,
-				     MAX77818_CHG_CNFG_04__CHG_CV_PRM__MASK,
-				     MAX77818_CHG_CNFG_04__CHG_CV_PRM__4V3);
+	ret = max77818_i2c_reg_write8(dev,
+				      MAX77818_REG_CHG_CNFG_04,
+				      MAX77818_CHG_CNFG_04__CHG_CV_PRM__MASK,
+				      MAX77818_CHG_CNFG_04__CHG_CV_PRM__4V3);
 	if (ret)
 		return ret;
 
-	ret = max77818_i2c_reg_write(dev,
-				     MAX77818_REG_CHG_CNFG_04,
-				     MAX77818_CHG_CNFG_04__MINVSYS__MASK,
-				     MAX77818_CHG_CNFG_04__MINVSYS__3P4V_VSYS_MIN);
+	ret = max77818_i2c_reg_write8(dev,
+				      MAX77818_REG_CHG_CNFG_04,
+				      MAX77818_CHG_CNFG_04__MINVSYS__MASK,
+				      MAX77818_CHG_CNFG_04__MINVSYS__3P4V_VSYS_MIN);
 	if (ret)
 		return ret;
 
@@ -388,10 +538,10 @@ int max77818_set_pogo_input_current_limit(struct udevice *dev,
 		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_1P5_A;
 	}
 
-	return max77818_i2c_reg_write(dev,
-				      MAX77818_REG_CHG_CNFG_09,
-				      MAX77818_CHG_CNFG_09__CHGIN_ILIM__MASK,
-				      ilim_config_value);
+	return max77818_i2c_reg_write8(dev,
+				       MAX77818_REG_CHG_CNFG_09,
+				       MAX77818_CHG_CNFG_09__CHGIN_ILIM__MASK,
+				       ilim_config_value);
 }
 
 int max77818_set_usbc_input_current_limit(struct udevice *dev)
@@ -400,10 +550,10 @@ int max77818_set_usbc_input_current_limit(struct udevice *dev)
 	if (!dev)
 		return -1;
 
-	return max77818_i2c_reg_write(dev,
-				      MAX77818_REG_CHG_CNFG_10,
-				      MAX77818_CHG_CNFG_10__WCIN_ILIM__MASK,
-				      MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A);
+	return max77818_i2c_reg_write8(dev,
+				       MAX77818_REG_CHG_CNFG_10,
+				       MAX77818_CHG_CNFG_10__WCIN_ILIM__MASK,
+				       MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A);
 }
 
 int max77818_enable_safeout1(void)

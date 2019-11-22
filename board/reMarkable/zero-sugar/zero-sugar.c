@@ -107,11 +107,20 @@ static int init_charger(void)
 		printf("%s: Failed to set USB-C input current limit\n",
 		       __func__);
 
-	printf("Tryint to set normal charge mode (turn off OTG mode if set)\n");
+	printf("Trying to set normal charge mode (turn off OTG mode if set)\n");
 	ret = max77818_set_otg_pwr(NULL, false);
 	if (ret != 0)
 		printf("%s: Failed to set normal charge mode\n",
 		       __func__);
+
+	printf("Checking if FGCC mode should be re-enabled\n");
+	ret = max77818_restore_fgcc();
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 
 	return 0;
 }

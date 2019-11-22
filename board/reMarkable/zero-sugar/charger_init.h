@@ -15,6 +15,9 @@ enum pogo_ilim {
 };
 
 int max77818_init_device(void);
+int max77818_read_fgcc_state(bool *state);
+int max77818_restore_fgcc(void);
+int max77818_enable_fgcc(bool enabled);
 
 /* STATUS QUERY */
 int max77818_get_battery_status(struct udevice *dev);
