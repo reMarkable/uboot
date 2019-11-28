@@ -222,4 +222,9 @@
 
 #define CONFIG_USBD_HS
 
+/* Watchdog */
+#define CONFIG_HW_WATCHDOG
+#define CONFIG_IMX_WATCHDOG
+#define CONFIG_WATCHDOG_TIMEOUT_MSECS	60000 /* 60s */
+
 #endif	/* __ZERO_SUGAR_H */
