@@ -12,7 +12,8 @@
 #include "epd_display_init.h"
 #include "epd_pmic_init.h"
 #include "digitizer_init.h"
-#include "charger_init.h"
+#include "max77818.h"
+#include "max77818_charger.h"
 #include "serial_download_trap.h"
 
 #include <asm/arch/clock.h>
@@ -77,10 +78,6 @@ static void power_perfs(void)
 static int init_charger(void)
 {
 	int ret;
-	printf("Initiating charging parameters\n");
-	ret = max77818_init_device();
-	if (ret != 0)
-		return ret;
 
 	printf("Enabling SAFEOUT1\n");
 	ret = max77818_enable_safeout1();
@@ -89,37 +86,11 @@ static int init_charger(void)
 		       __func__, ret);
 	}
 
-	printf("Trying to set fast charge current: 1.5A\n");
-	ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
-	if (ret != 0)
-		printf("%s Failed to set fast charger current\n",
-		       __func__);
-
-	printf("Trying to set pogo input current limit: 1.5A\n");
-	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
-	if (ret != 0)
-		printf("%s: Failed to set pogo input current limit\n",
-		       __func__);
-
-	printf("Trying to set USB-C input current limit: 1.2A\n");
-	ret = max77818_set_usbc_input_current_limit(NULL);
-	if (ret != 0)
-		printf("%s: Failed to set USB-C input current limit\n",
-		       __func__);
-
-	printf("Trying to set normal charge mode (turn off OTG mode if set)\n");
-	ret = max77818_set_otg_pwr(NULL, false);
-	if (ret != 0)
-		printf("%s: Failed to set normal charge mode\n",
-		       __func__);
-
-	printf("Checking if FGCC mode should be re-enabled\n");
-	ret = max77818_restore_fgcc();
+	printf("Setting minimal charger configuration\n");
+	ret = max77818_set_minimal_charger_config();
 	if (ret) {
-		printf("%s: Failed to restore FGCC: %d\n",
-		       __func__,
-		       ret);
-		return ret;
+		printf("%s: Failed to set charger config: %d\n",
+		       __func__, ret);
 	}
 
 	return 0;

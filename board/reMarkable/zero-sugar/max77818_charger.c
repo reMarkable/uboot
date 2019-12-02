@@ -1,27 +1,12 @@
-#include "charger_init.h"
+#include "max77818_charger.h"
+#include "max77818.h"
+#include "max77818_battery.h"
 
 #include <asm/arch/sys_proto.h>
-#include <asm/gpio.h>
 #include <dm/uclass.h>
-
 #include <linux/errno.h>
 #include <linux/types.h>
-
 #include <i2c.h>
-
-#define MAX77818_I2C_BUS						1
-
-#define MAX77818_CHARGER_I2C_ADDR					0x69
-#define MAX77818_FG_I2C_ADDR						0x36
-#define MAX77818_ID_I2C_ADDR						0x66
-
-#define MAX77818_REG_SAFEOUTCTRL					0xC6
-#define MAX77818_SAFEOUTCTRL_ENSAFEOUT1					BIT(6)
-
-#define MAX77818_REG_FG_CONFIG						0x1D
-#define MAX77818_FG_CONFIG__FGCC_MASK					0x0800
-#define MAX77818_FG_CONFIG__FGCC_ENABLED				0x0800
-#define MAX77818_FG_CONFIG__FGCC_DISABLED				0x0000
 
 #define MAX77818_REG_DETAILS_0						0xB3
 #define MAX77818_DETAILS_0__BAT_DET_MASK				0x01
@@ -40,7 +25,6 @@
 #define MAX77818_DETAILS_0__INV_CHGIN_ABOVE_CHGINUVLO			0x01
 #define MAX77818_DETAILS_0__INV_CHGIN_ABOVE_CHGINOVLO			0x02
 #define MAX77818_DETAILS_0__OK_CHGIN_BELOW_CHGINOVLO			0x03
-
 
 #define MAX77818_REG_DETAILS_1						0xB4
 
@@ -76,98 +60,55 @@
 #define MAX77818_CHG_CNFG_10__WCIN_ILIM__MASK				0x3F
 #define MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A				0x3F
 
-static struct udevice *bus = NULL, *idDev = NULL, *chDev = NULL, *fgDev = NULL;
-static bool fgcc_restore_state = 0;
+static struct udevice *chDev = NULL;
 
-static int max77818_i2c_reg_read16(struct udevice *dev,
-				   u8 addr,
-				   u16 *data);
-
-static int max77818_i2c_reg_write16(struct udevice *dev,
-				    u8 addr,
-				    u16 mask,
-				    u16 data)
+static int max77818_init_charger_device(bool leave_fgcc_disabled, bool *restore_state)
 {
 	int ret;
-	u8 val[2];
-	u16 finalVal;
-	u16 maskedVal;
-	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
+	bool fgcc_restore_state;
 
-	ret = dm_i2c_read(dev, addr, val, 2);
-	if (ret) {
-		printf("%s: Failed to read from addr 0x%02x/dev 0x%02x: %d\n",
-		       __func__,
-		       addr,
-		       chip->chip_addr,
-		       ret);
-		return ret;
-	} else {
-		finalVal = val[0] | ((u16)val[1] << 8);
-	}
-
-	maskedVal = data & mask;
-	finalVal &= ~mask;
-	finalVal |= maskedVal;
-	val[0] = finalVal & 0xff;
-	val[1] = (finalVal >> 8) & 0xff;
-
-	ret = dm_i2c_write(dev, addr, val, 2);
-	if (ret) {
-		printf("%s: Failed to write to addr 0x%02x/dev 0x%02x: %d\n",
-		       __func__,
-		       addr,
-		       chip->chip_addr,
-		       ret);
-	}
-
-	return 0;
-}
-
-static int max77818_i2c_reg_read16(struct udevice *dev,
-				   u8 addr,
-				   u16 *data)
-{
-	int ret;
-	u8 val[2];
-	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
-
-	ret = dm_i2c_read(fgDev, addr, val, 2);
-	if (ret) {
-		printf("%s: Failed to read from addr 0x%02x/dev 0x%02x: %d\n",
-		       __func__,
-		       addr,
-		       chip->chip_addr,
-		       ret);
-		return ret;
-	} else {
-		*data = val[0] | ((u16)val[1] << 8);
-	}
-
-	return 0;
-}
-
-
-static int max77818_i2c_reg_write8(struct udevice *dev,
-				  u8 addr,
-				  u8 mask,
-				  u8 data)
-{
-	u8 valb;
-	int ret;
-
-	if (mask != 0xff) {
-		ret = dm_i2c_read(dev, addr, &valb, 1);
-		if (ret)
+	struct udevice *bus = max77818_get_bus();
+	if (!bus) {
+		ret = max77818_init_i2c_bus();
+		if (ret) {
+			printf("%s: Unable to complete charger device initialization",
+			       __func__);
 			return ret;
+		}
+	}
 
-		valb &= ~mask;
-		valb |= data;
-	} else
-		valb = data;
+	/* Turn off FGCC in order to do required charger config, if enabled */
+	printf("Disabling FGCC mode in order to do minimal charger config\n");
+	ret = max77818_set_fgcc_state(false, &fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to disable FGCC mode: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 
-	ret = dm_i2c_write(dev, addr, &valb, 1);
-	return ret;
+	/* Slight delay to let the charger device get back online */
+	mdelay(100);
+
+	ret = dm_i2c_probe(bus, MAX77818_CHARGER_I2C_ADDR, 0, &chDev);
+	if (ret) {
+		printf("%s: Can't find device id=0x%x, on bus %d\n",
+		__func__, MAX77818_CHARGER_I2C_ADDR, MAX77818_I2C_BUS);
+		return -ENODEV;
+	}
+
+	if (!leave_fgcc_disabled) {
+		ret = max77818_restore_fgcc(fgcc_restore_state);
+		if (ret) {
+			printf("%s: Failed to restore FGCC mode: %d\n",
+			       __func__,
+			       ret);
+			return ret;
+		}
+	}
+
+	*restore_state = fgcc_restore_state;
+	return 0;
 }
 
 static int max77818_set_reg_lock(struct udevice *dev, bool locked)
@@ -206,115 +147,6 @@ static int max77818_get_details_2(struct udevice *dev)
 	}
 
 	printf("Read DETAILS_2: 0x%02X\n", regVal);
-
-	return 0;
-}
-
-int max77818_init_device(void)
-{
-	int ret;
-
-	ret = uclass_get_device_by_seq(UCLASS_I2C, MAX77818_I2C_BUS, &bus);
-	if (ret) {
-		printf("%s: Can't find I2C bus %d (expected for MAX77818)\n",
-		       __func__, MAX77818_I2C_BUS);
-		return -1;
-	}
-
-	ret = dm_i2c_probe(bus, MAX77818_ID_I2C_ADDR, 0, &idDev);
-	if (ret) {
-		printf("%s: Can't find device id=0x%x, on bus %d\n",
-		__func__, MAX77818_ID_I2C_ADDR, MAX77818_I2C_BUS);
-		return -1;
-	}
-
-	ret = dm_i2c_probe(bus, MAX77818_FG_I2C_ADDR, 0, &fgDev);
-	if (ret) {
-		printf("%s: Can't find device id=0x%x, on bus %d\n",
-		__func__, MAX77818_FG_I2C_ADDR, MAX77818_I2C_BUS);
-		return -1;
-	}
-
-	/* Read current FGCC state to be restored after config */
-	printf("%s: Reading current FGCC state to be restored\n",
-	       __func__);
-	ret = max77818_read_fgcc_state(&fgcc_restore_state);
-	if (ret) {
-		printf("%s: Unable to read current FGCC state,"
-		       "assuming FGCC should be configured\n",
-		       __func__);
-		fgcc_restore_state = true;
-	}
-
-	/* Turn off FGCC in order to do required charger config, if enabled */
-	if (fgcc_restore_state) {
-		printf("Turning off FGCC in order to do minimal charger config\n");
-		ret = max77818_enable_fgcc(false);
-		if (ret) {
-			printf("%s: Failed to disable FGCC mode: %d\n",
-			       __func__,
-			       ret);
-			return -1;
-		}
-
-		mdelay(100);
-	}
-	else {
-		printf("FGCC currently not configured, no need to disable\n");
-	}
-
-	ret = dm_i2c_probe(bus, MAX77818_CHARGER_I2C_ADDR, 0, &chDev);
-	if (ret) {
-		printf("%s: Can't find device id=0x%x, on bus %d\n",
-		__func__, MAX77818_CHARGER_I2C_ADDR, MAX77818_I2C_BUS);
-	}
-	return 0;
-}
-
-int max77818_read_fgcc_state(bool *state)
-{
-	int ret;
-	u16 value;
-
-	ret = max77818_i2c_reg_read16(fgDev,
-				      MAX77818_REG_FG_CONFIG,
-				      &value);
-	if (ret) {
-		printf("%s: Failed to read current FGCC state\n", __func__);
-		return ret;
-	}
-	value &= MAX77818_FG_CONFIG__FGCC_MASK;
-	*state = (value == MAX77818_FG_CONFIG__FGCC_ENABLED);
-
-	return 0;
-}
-
-int max77818_restore_fgcc(void)
-{
-	if (fgcc_restore_state) {
-		printf("Restoring FGCC state (re-enabling)\n");
-		return max77818_enable_fgcc(true);
-	}
-	else {
-		printf("FGCC state not to be enabled (was disabled)\n");
-		return 0;
-	}
-}
-int max77818_enable_fgcc(bool enabled)
-{
-	int ret;
-	u16 value;
-
-	value = (enabled ? MAX77818_FG_CONFIG__FGCC_ENABLED :
-			   MAX77818_FG_CONFIG__FGCC_DISABLED);
-
-	ret = max77818_i2c_reg_write16(fgDev, MAX77818_REG_FG_CONFIG,
-				       MAX77818_FG_CONFIG__FGCC_MASK,
-				       value);
-	if (ret) {
-		printf("%s: Failed to write FGCC mode\n", __func__);
-		return ret;
-	}
 
 	return 0;
 }
@@ -556,21 +388,52 @@ int max77818_set_usbc_input_current_limit(struct udevice *dev)
 				       MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A);
 }
 
-int max77818_enable_safeout1(void)
+int max77818_set_minimal_charger_config(void)
 {
 	int ret;
-	u8 val;
+	bool fgcc_restore_state;
 
-	if (!idDev)
-		return -ENODEV;
+	if (!chDev) {
+		ret = 	max77818_init_charger_device(true, &fgcc_restore_state);
+		if (ret) {
+			return ret;
+		}
+	}
 
-	ret = dm_i2c_read(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
-	if (ret)
+	printf("Trying to set fast charge current: 1.5A\n");
+	ret = max77818_set_fast_charge_current(NULL, FASTCHARGE_1P5_A);
+	if (ret != 0)
+		printf("%s Failed to set fast charger current\n",
+		       __func__);
+
+	printf("Trying to set pogo input current limit: 1.5A\n");
+	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
+	if (ret != 0)
+		printf("%s: Failed to set pogo input current limit\n",
+		       __func__);
+
+	printf("Trying to set USB-C input current limit: 1.2A\n");
+	ret = max77818_set_usbc_input_current_limit(NULL);
+	if (ret != 0)
+		printf("%s: Failed to set USB-C input current limit\n",
+		       __func__);
+
+	printf("Trying to set normal charge mode (turn off OTG mode if set)\n");
+	ret = max77818_set_otg_pwr(NULL, false);
+	if (ret != 0)
+		printf("%s: Failed to set normal charge mode\n",
+		       __func__);
+
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
 		return ret;
+	}
 
-	val |= MAX77818_SAFEOUTCTRL_ENSAFEOUT1;
 
-	return dm_i2c_write(idDev, MAX77818_REG_SAFEOUTCTRL, &val, 1);
+	return 0;
 }
 
 static int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp,
@@ -579,11 +442,15 @@ static int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp,
 					   char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to get battery charge status\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_get_battery_status(chDev);
@@ -616,6 +483,14 @@ static int zs_do_get_battery_charge_status(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
+
 	return 0;
 }
 U_BOOT_CMD(
@@ -630,6 +505,7 @@ static int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp,
 			     char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 2) {
 		printf("Usage: set_otg_power <on | off>\n");
@@ -641,10 +517,13 @@ static int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp,
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set OTG power\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	if (strcmp(argv[1], "on") == 0) {
@@ -662,6 +541,14 @@ static int zs_do_set_otg_pwr(cmd_tbl_t *cmdtp,
 		}
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
+
 	return 0;
 }
 U_BOOT_CMD(
@@ -676,21 +563,33 @@ static int zs_do_set_fastcharge_current_1P5_A(cmd_tbl_t *cmdtp,
 					      char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_fastcharge_current_2P8_A\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-	ret = max77818_init_device();
-	if(ret)
-		return ret;
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (1.5A)\n",
+			       __func__);
+			return ret;
+		}
 	}
 
 	ret = max77818_set_fast_charge_current(chDev, FASTCHARGE_1P5_A);
 	if (ret) {
 		printf("Failed to set fast charge current: %d\n", ret);
+		return ret;
+	}
+
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
 		return ret;
 	}
 
@@ -708,16 +607,20 @@ static int zs_do_set_fastcharge_current_2P8_A(cmd_tbl_t *cmdtp,
 					      char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_fastcharge_current_2P8_A\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (2.8A)\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_set_fast_charge_current(chDev, FASTCHARGE_2P8_A);
@@ -726,6 +629,13 @@ static int zs_do_set_fastcharge_current_2P8_A(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 	return 0;
 }
 U_BOOT_CMD(
@@ -740,16 +650,20 @@ static int zs_do_set_charge_termination_voltage(cmd_tbl_t *cmdtp,
 						char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_charge_termination_voltage\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (2.8A)\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_set_charge_termination_voltage(chDev);
@@ -758,6 +672,13 @@ static int zs_do_set_charge_termination_voltage(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 	return 0;
 }
 U_BOOT_CMD(
@@ -772,16 +693,20 @@ static int zs_do_set_pogo_input_current_limit_1P5_A(cmd_tbl_t *cmdtp,
 						    char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_pogo_input_current_limit\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (2.8A)\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_set_pogo_input_current_limit(chDev, ILIM_1P5_A);
@@ -790,6 +715,13 @@ static int zs_do_set_pogo_input_current_limit_1P5_A(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 	return 0;
 }
 U_BOOT_CMD(
@@ -804,16 +736,20 @@ static int zs_do_set_pogo_input_current_limit_2P8_A(cmd_tbl_t *cmdtp,
 						    char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_pogo_input_current_limit\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (2.8A)\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_set_pogo_input_current_limit(chDev, ILIM_2P8_A);
@@ -822,6 +758,13 @@ static int zs_do_set_pogo_input_current_limit_2P8_A(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 	return 0;
 }
 U_BOOT_CMD(
@@ -836,16 +779,20 @@ static int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp,
 					      char * const argv[])
 {
 	int ret;
+	bool fgcc_restore_state;
 
 	if (argc != 1) {
 		printf("Usage: set_usbc_input_current_limit\n");
 		return -1;
 	}
 
-	if (!bus || !chDev || !fgDev || !idDev) {
-		ret = max77818_init_device();
-		if(ret)
+	if (!chDev) {
+		ret = max77818_init_charger_device(true, &fgcc_restore_state);
+		if(ret) {
+			printf("%s: Unable to set fastcharge current (2.8A)\n",
+			       __func__);
 			return ret;
+		}
 	}
 
 	ret = max77818_set_usbc_input_current_limit(chDev);
@@ -854,6 +801,13 @@ static int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp,
 		return ret;
 	}
 
+	ret = max77818_restore_fgcc(fgcc_restore_state);
+	if (ret) {
+		printf("%s: Failed to restore FGCC: %d\n",
+		       __func__,
+		       ret);
+		return ret;
+	}
 	return 0;
 }
 U_BOOT_CMD(

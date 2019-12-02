@@ -1,7 +1,6 @@
 #ifndef CHARGER_INIT_H
 #define CHARGER_INIT_H
 
-#include <command.h>
 #include <dm/device.h>
 
 enum fast_charge_current {
@@ -14,10 +13,8 @@ enum pogo_ilim {
 	ILIM_2P8_A
 };
 
-int max77818_init_device(void);
-int max77818_read_fgcc_state(bool *state);
-int max77818_restore_fgcc(void);
-int max77818_enable_fgcc(bool enabled);
+/* COMPLETE INIT SEQUENCE WITH FGCC MODE SWITCH*/
+int max77818_set_minimal_charger_config(void);
 
 /* STATUS QUERY */
 int max77818_get_battery_status(struct udevice *dev);
@@ -30,7 +27,5 @@ int max77818_set_fast_charge_current(struct udevice *dev, enum fast_charge_curre
 int max77818_set_charge_termination_voltage(struct udevice *dev);
 int max77818_set_pogo_input_current_limit(struct udevice *dev, enum pogo_ilim ilim);
 int max77818_set_usbc_input_current_limit(struct udevice *dev);
-
-int max77818_enable_safeout1(void);
 
 #endif /* CHARGRE_INIT_H */

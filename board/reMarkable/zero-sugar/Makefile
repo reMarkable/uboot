@@ -8,8 +8,10 @@ obj-y  := zero-sugar.o \
           epd_pmic_init.o \
           epd_display_init.o \
           digitizer_init.o \
-          charger_init.o \
           mmc_tools.o \
+          max77818.o \
+          max77818_battery.o \
+          max77818_charger.o \
           serial_download_trap.o \
           jump_rom_usb_download.o \
           ../../freescale/common/mmc.o
