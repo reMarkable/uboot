@@ -17,7 +17,15 @@ int max77818_i2c_reg_write16(struct udevice *dev, u8 addr, u16 mask, u16 data)
 	u8 val[2];
 	u16 read_val, final_val;
 	u16 masked_data;
-	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
+	struct dm_i2c_chip *chip;
+
+	if (!dev) {
+		printf("%s: Cannot write to not initialized dev !\n",
+		       __func__);
+		return -EINVAL;
+	}
+
+	chip = dev_get_parent_platdata(dev);
 
 	ret = max77818_i2c_reg_read16(dev, addr, &read_val);
 	if (ret)
@@ -36,6 +44,8 @@ int max77818_i2c_reg_write16(struct udevice *dev, u8 addr, u16 mask, u16 data)
 		       addr,
 		       chip->chip_addr,
 		       ret);
+
+		return ret;
 	}
 
 	return 0;
@@ -45,7 +55,15 @@ int max77818_i2c_reg_read16(struct udevice *dev, u8 addr, u16 *data)
 {
 	int ret;
 	u8 val[2];
-	struct dm_i2c_chip *chip = dev_get_parent_platdata(dev);
+	struct dm_i2c_chip *chip;
+
+	if (!dev) {
+		printf("%s: Cannot write to not initialized dev !\n",
+		       __func__);
+		return -EINVAL;
+	}
+
+	chip = dev_get_parent_platdata(dev);
 
 	ret = dm_i2c_read(dev, addr, val, 2);
 	if (ret) {
@@ -66,6 +84,15 @@ int max77818_i2c_reg_write8(struct udevice *dev, u8 addr, u8 mask, u8 data)
 {
 	u8 valb;
 	int ret;
+	struct dm_i2c_chip *chip;
+
+	if (!dev) {
+		printf("%s: Cannot write to not initialized dev !\n",
+		       __func__);
+		return -EINVAL;
+	}
+
+	chip = dev_get_parent_platdata(dev);
 
 	if (mask != 0xff) {
 		ret = dm_i2c_read(dev, addr, &valb, 1);
@@ -78,7 +105,17 @@ int max77818_i2c_reg_write8(struct udevice *dev, u8 addr, u8 mask, u8 data)
 		valb = data;
 
 	ret = dm_i2c_write(dev, addr, &valb, 1);
-	return ret;
+	if (ret) {
+		printf("%s: Failed to write to addr 0x%02x/dev 0x%02x: %d\n",
+		       __func__,
+		       addr,
+		       chip->chip_addr,
+		       ret);
+
+		return ret;
+	}
+
+	return 0;
 }
 
 int max77818_init_i2c_bus(void)
@@ -110,7 +147,7 @@ int max77818_init_idDev(void)
 	if (ret) {
 		printf("%s: Can't find device id=0x%x, on bus %d\n",
 		__func__, MAX77818_ID_I2C_ADDR, MAX77818_I2C_BUS);
-		return -ENODEV;
+		return ret;
 	}
 
 	return 0;

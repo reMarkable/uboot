@@ -29,8 +29,8 @@ int max77818_init_fg_device(void)
 	ret = dm_i2c_probe(bus, MAX77818_FG_I2C_ADDR, 0, &fgDev);
 	if (ret) {
 		printf("%s: Can't find device id=0x%x, on bus %d\n",
-		__func__, MAX77818_FG_I2C_ADDR, MAX77818_I2C_BUS);
-		return -ENODEV;
+		       __func__, MAX77818_FG_I2C_ADDR, MAX77818_I2C_BUS);
+		return ret;
 	}
 
 	return 0;
@@ -43,7 +43,7 @@ int max77818_read_fgcc_state(bool *state)
 
 	if (!fgDev) {
 		ret = max77818_init_fg_device();
-		if(ret) {
+		if (ret) {
 			printf("%s: Unable to read FGCC state\n",
 			       __func__);
 			return ret;
@@ -84,8 +84,7 @@ int max77818_set_fgcc_state(bool enabled, bool *restore_state)
 			       "assuming FGCC should be configured\n",
 			       __func__);
 
-			if (restore_state)
-				*restore_state = true;
+			*restore_state = true;
 		}
 	}
 
