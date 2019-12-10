@@ -36,9 +36,10 @@ int probe_serial_download_trap(void)
     /* ... if GPIO6_17 follows to be 0, we get it! */
     usbInput = gpio_get_value(IMX_GPIO_NR(6, 17));
     if (usbInput == 0) {
-        printf("Going to serial download mode ...\n");
-        jump_rom_usb_download();
-        while (1);
+	printf("Going to serial download mode ...\n");
+	mdelay(10);
+	jump_rom_usb_download();
+	while (1);
     }
 
     return 0;
