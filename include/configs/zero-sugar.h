@@ -127,8 +127,8 @@
 	"mmcautodetect=yes\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=/dev/mmcblk2p${active_partition} rootwait rootfstype=ext4 rw\0" \
-	"loadimage=ext4load mmc ${mmcdev}:${active_partition} ${loadaddr} ${image}\0" \
-	"loadfdt=ext4load mmc ${mmcdev}:${active_partition} ${fdt_addr} ${fdt_file}\0" \
+	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
+	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"mmc dev ${mmcdev}; " \
 		"if mmc rescan; then " \
