@@ -43,6 +43,10 @@
 #include <console.h>
 #include <membuff.h>
 
+#include <environment.h>
+#include <asm/setup.h>
+#include <asm/bootm.h>
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int dram_init(void)
@@ -96,6 +100,39 @@ static int init_charger(void)
 	return 0;
 }
 
+static void save_serial(void)
+{
+	struct tag_serialnr serialnr = {0};
+	char snstr[22] = {0};
+	u64 sn;
+	int ret;
+
+	if (env_get("serial#") != NULL)
+		return;
+
+	get_board_serial(&serialnr);
+
+	if (serialnr.low == 0 && !serialnr.high == 0)
+		return;
+
+	sn = (u64)serialnr.low + ((u64)serialnr.high << 32);
+
+	ret = snprintf(snstr, sizeof(snstr) - 1, "%llu", sn);
+	if (ret <= 0) {
+		printf("%s: Failed to write serial number to string\n", __func__);
+		return;
+	}
+
+	ret = env_set("serial#", snstr);
+	if (ret) {
+		printf("%s: Failed to write serial number to environment\n", __func__);
+		return;
+	}
+
+	if (env_save())
+		printf("%s: Failed to save environment\n", __func__);
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
@@ -133,6 +170,8 @@ int board_late_init(void)
 	dcache_enable();
 
 	power_perfs();
+
+	save_serial();
 
 	return 0;
 }
