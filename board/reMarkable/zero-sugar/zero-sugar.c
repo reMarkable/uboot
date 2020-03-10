@@ -47,6 +47,10 @@
 #include <asm/setup.h>
 #include <asm/bootm.h>
 
+#define SNVS_BASE_ADDR 0x30370000
+#define SNVS_REG_LPCR SNVS_BASE_ADDR + 0x38
+#define SNVS_MASK_POWEROFF (BIT(5) | BIT(6))
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int dram_init(void)
@@ -59,6 +63,22 @@ int dram_init(void)
 static iomux_v3_cfg_t const wdog_pads[] = {
 	MX7D_PAD_ENET1_COL__WDOG1_WDOG_ANY | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+
+static void snvs_poweroff(void)
+{
+	writel(SNVS_MASK_POWEROFF, SNVS_REG_LPCR);
+	while (1) {
+		udelay(500000);
+		printf("Should have halted!\n");
+	}
+}
+
+int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	snvs_poweroff();
+
+	return 0;
+}
 
 static void power_perfs(void)
 {
