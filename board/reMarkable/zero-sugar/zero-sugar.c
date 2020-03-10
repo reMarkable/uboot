@@ -99,7 +99,7 @@ static void power_perfs(void)
 	zs_do_config_digitizer_powerctrl_pins();
 }
 
-static int init_charger(void)
+static void init_charger(void)
 {
 	int ret;
 
@@ -116,8 +116,6 @@ static int init_charger(void)
 		printf("%s: Failed to set charger config: %d\n",
 		       __func__, ret);
 	}
-
-	return 0;
 }
 
 static void save_serial(void)
