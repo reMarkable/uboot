@@ -11,8 +11,8 @@
 #define MAX77818_REG_DETAILS_0						0xB3
 #define MAX77818_DETAILS_0__BAT_DET_MASK				0x01
 #define MAX77818_DETAILS_0__BAT_DET_SHIFT				0x00
-#define MAX77818_DETAILS_0__BAT_PRECENT					0x00
-#define MAX77818_DETAILS_0__BAT_NOT_PRECENT				0x01
+#define MAX77818_DETAILS_0__BAT_PRESENT					0x00
+#define MAX77818_DETAILS_0__BAT_NOT_PRESENT				0x01
 #define MAX77818_DETAILS_0__WCIN_DETAILS_MASK				0x18
 #define MAX77818_DETAILS_0__WCIN_DETAILS_SHIFT				0x03
 #define MAX77818_DETAILS_0__INV_WCIN_BELOW_WCINUVLO			0x00
@@ -166,11 +166,11 @@ int max77818_get_battery_status(struct udevice *dev)
 	regVal >>= MAX77818_DETAILS_0__BAT_DET_SHIFT;
 
 	switch(regVal) {
-	case MAX77818_DETAILS_0__BAT_PRECENT:
-		printf("Battery is precent\n");
+	case MAX77818_DETAILS_0__BAT_PRESENT:
+		printf("Battery is present\n");
 		break;
-	case MAX77818_DETAILS_0__BAT_NOT_PRECENT:
-		printf("Battery is NOT precent\n");
+	case MAX77818_DETAILS_0__BAT_NOT_PRESENT:
+		printf("Battery is NOT present\n");
 		break;
 	default:
 		printf("Unknown battery detection state: 0x%02X\n", regVal);
