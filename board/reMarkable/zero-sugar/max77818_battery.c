@@ -10,6 +10,8 @@
 #define MAX77818_FG_CONFIG__FGCC_ENABLED				0x0800
 #define MAX77818_FG_CONFIG__FGCC_DISABLED				0x0000
 
+#define MAX77818_REG_FG_REPSOC 0x06
+
 static struct udevice *fgDev = NULL;
 
 int max77818_init_fg_device(void)
@@ -124,3 +126,48 @@ int max77818_restore_fgcc(bool restore_state)
 		return max77818_set_fgcc_state(false, NULL);
 	}
 }
+
+int max77818_get_battery_capacity(u8 *capacity)
+{
+	int ret;
+	u16 value;
+
+	if (!fgDev) {
+		ret = max77818_init_fg_device();
+		if (ret)
+			return ret;
+	}
+
+	ret = max77818_i2c_reg_read16(fgDev,
+				      MAX77818_REG_FG_REPSOC,
+				      &value);
+	if (ret)
+		return ret;
+
+	*capacity = (u8)(value >> 8);
+
+	return 0;
+}
+
+static int do_max77818_get_battery_capacity(cmd_tbl_t *cmdtp,
+					   int flag,
+					   int argc,
+					   char * const argv[])
+{
+	int ret;
+	u8 capacity;
+
+	ret = max77818_get_battery_capacity(&capacity);
+	if (ret)
+		return ret;
+
+	printf("Capacity: %u%%\n", capacity);
+
+	return 0;
+}
+
+U_BOOT_CMD(
+	max77818_get_battery_capacity, 1, 1, do_max77818_get_battery_capacity,
+	"Get battery state of charge",
+	""
+);

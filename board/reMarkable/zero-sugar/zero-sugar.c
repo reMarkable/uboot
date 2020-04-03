@@ -14,6 +14,7 @@
 #include "digitizer_init.h"
 #include "max77818.h"
 #include "max77818_charger.h"
+#include "max77818_battery.h"
 #include "serial_download_trap.h"
 
 #include <asm/arch/clock.h>
@@ -47,7 +48,6 @@
 #include <asm/setup.h>
 #include <asm/bootm.h>
 
-#define SNVS_BASE_ADDR 0x30370000
 #define SNVS_REG_LPCR SNVS_BASE_ADDR + 0x38
 #define SNVS_MASK_POWEROFF (BIT(5) | BIT(6))
 
@@ -102,6 +102,7 @@ static void power_perfs(void)
 static void init_charger(void)
 {
 	int ret;
+	u8 capacity;
 
 	printf("Enabling SAFEOUT1\n");
 	ret = max77818_enable_safeout1();
@@ -115,6 +116,19 @@ static void init_charger(void)
 	if (ret) {
 		printf("%s: Failed to set charger config: %d\n",
 		       __func__, ret);
+	}
+
+	printf("Reading remaining battery capacity\n");
+	ret = max77818_get_battery_capacity(&capacity);
+	if (ret) {
+		printf("%s: Failed to read battery capacity: %d\n", __func__, ret);
+	}
+	else if (capacity < 5) {
+		printf("Battery too low (%u%% < 5%%), turning off\n", capacity);
+		snvs_poweroff();
+	}
+	else {
+		printf("Battery currently at %u%%\n", capacity);
 	}
 }
 
