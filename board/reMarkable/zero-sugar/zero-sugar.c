@@ -103,6 +103,8 @@ static void init_charger(void)
 {
 	int ret;
 	u8 capacity;
+	const u8 min_capacity = 5;
+	bool is_charging;
 
 	printf("Enabling SAFEOUT1\n");
 	ret = max77818_enable_safeout1();
@@ -118,13 +120,18 @@ static void init_charger(void)
 		       __func__, ret);
 	}
 
-	printf("Reading remaining battery capacity\n");
+	is_charging = max77818_is_charging();
+	printf("Device %s charging\n", is_charging ? "is" : "is not");
+
 	ret = max77818_get_battery_capacity(&capacity);
 	if (ret) {
 		printf("%s: Failed to read battery capacity: %d\n", __func__, ret);
+		return;
 	}
-	else if (capacity < 5) {
-		printf("Battery too low (%u%% < 5%%), turning off\n", capacity);
+
+	if (capacity < min_capacity && !is_charging) {
+		printf("Battery critically low (%u%% < %u%%), turning off\n",
+				capacity, min_capacity);
 		snvs_poweroff();
 	}
 	else {
