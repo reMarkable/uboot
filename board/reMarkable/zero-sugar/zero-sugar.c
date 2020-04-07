@@ -17,32 +17,8 @@
 #include "max77818_battery.h"
 #include "serial_download_trap.h"
 
-#include <asm/arch/clock.h>
-#include <asm/arch/imx-regs.h>
 #include <asm/arch/mx7-pins.h>
-#include <asm/arch/sys_proto.h>
-#include <asm/gpio.h>
 #include <asm/mach-imx/iomux-v3.h>
-#include <asm/mach-imx/boot_mode.h>
-#include <asm/io.h>
-#include <linux/sizes.h>
-#include <common.h>
-#include <fsl_esdhc.h>
-#include <mmc.h>
-#include <miiphy.h>
-#include <netdev.h>
-#include <power/pmic.h>
-#include <i2c.h>
-#include <asm/mach-imx/mxc_i2c.h>
-#include <asm/arch/crm_regs.h>
-#include <command.h>
-#include <dm/uclass.h>
-
-#include <asm/mach-imx/video.h>
-
-#include <fat.h>
-#include <console.h>
-#include <membuff.h>
 
 #include <environment.h>
 #include <asm/setup.h>
