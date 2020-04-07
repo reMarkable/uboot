@@ -3,6 +3,9 @@
 #include "max77818_battery.h"
 
 #include <asm/arch/sys_proto.h>
+#include <asm/arch/mx7-pins.h>
+#include <asm/gpio.h>
+#include <asm/mach-imx/iomux-v3.h>
 #include <dm/uclass.h>
 #include <linux/errno.h>
 #include <linux/types.h>
@@ -815,3 +818,45 @@ U_BOOT_CMD(
 	"Set max USB-C input current (1.3A)",
 	"Set max charge input current limit to 1260 (1.3A) for the USB-C charge input"
 );
+
+static int read_gpio(unsigned gpio)
+{
+	int ret;
+
+	ret = gpio_request(gpio, "gpio");
+	if (ret) {
+		printf("gpio_request failed for gpio: %u\n", gpio);
+		return ret;
+	}
+
+	ret = gpio_direction_input(gpio);
+	if (ret) {
+		printf("gpio_direction_input failed for gpio: %u\n", gpio);
+		return ret;
+	}
+
+	return gpio_get_value(gpio);
+}
+
+static iomux_v3_cfg_t const chargestat_pads[] = {
+	MX7D_PAD_SAI2_TX_SYNC__GPIO6_IO19 | MUX_PAD_CTRL(PAD_CTL_PUS_PU100KOHM),
+	MX7D_PAD_SAI2_TX_BCLK__GPIO6_IO20 | MUX_PAD_CTRL(PAD_CTL_PUS_PU100KOHM),
+};
+
+bool max77818_is_charging(void)
+{
+	int ret;
+	unsigned gpio_chgin = IMX_GPIO_NR(6, 19);
+	unsigned gpio_wcin = IMX_GPIO_NR(6, 20);
+	bool stat_chgin, stat_wcin;
+
+	imx_iomux_v3_setup_multiple_pads(chargestat_pads, ARRAY_SIZE(chargestat_pads));
+
+	ret = read_gpio(gpio_chgin);
+	stat_chgin = (ret == 0);
+
+	ret = read_gpio(gpio_wcin);
+	stat_wcin = (ret == 0);
+
+	return (stat_chgin || stat_wcin);
+}

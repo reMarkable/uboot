@@ -20,6 +20,7 @@ int max77818_set_minimal_charger_config(void);
 int max77818_get_battery_status(struct udevice *dev);
 int max77818_get_wcin_details(struct udevice *dev);
 int max77818_get_chgin_details(struct udevice *dev);
+bool max77818_is_charging(void);
 
 /* CHARGER CONFIG */
 int max77818_set_otg_pwr(struct udevice *dev, bool otg_on);
