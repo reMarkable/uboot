@@ -42,7 +42,10 @@ static iomux_v3_cfg_t const wdog_pads[] = {
 
 static void snvs_poweroff(void)
 {
-	writel(SNVS_MASK_POWEROFF, SNVS_REG_LPCR);
+	unsigned lpcr = readl(SNVS_REG_LPCR);
+	lpcr |= SNVS_MASK_POWEROFF;
+	writel(lpcr, SNVS_REG_LPCR);
+
 	while (1) {
 		udelay(500000);
 		printf("Should have halted!\n");
