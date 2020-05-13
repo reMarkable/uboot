@@ -56,10 +56,12 @@
 
 #define MAX77818_REG_CHG_CNFG_09					0xC0
 #define MAX77818_CHG_CNFG_09__CHGIN_ILIM__MASK				0x7f
+#define MAX77818_CHG_CNFG_09__CHGIN_ILIM_500_MA				0x0f
 #define MAX77818_CHG_CNFG_09__CHGIN_ILIM_1P5_A				0x2D
 #define MAX77818_CHG_CNFG_09__CHGIN_ILIM_2P8_A				0x54
 
 #define MAX77818_REG_CHG_CNFG_10					0xC1
+#define MAX77818_CHG_CNFG_10__WCIN_ILIM_500_MA				0x19
 #define MAX77818_CHG_CNFG_10__WCIN_ILIM__MASK				0x3F
 #define MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A				0x3F
 
@@ -362,6 +364,9 @@ int max77818_set_pogo_input_current_limit(struct udevice *dev,
 		return -1;
 
 	switch(ilim) {
+	case ILIM_500_MA:
+		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_500_MA;
+		break;
 	case ILIM_1P5_A:
 		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_1P5_A;
 		break;
@@ -369,8 +374,8 @@ int max77818_set_pogo_input_current_limit(struct udevice *dev,
 		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_2P8_A;
 		break;
 	default:
-		/* Invalid value, just set default 1.5A */
-		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_1P5_A;
+		/* Invalid value, just set default 500 mA */
+		ilim_config_value = MAX77818_CHG_CNFG_09__CHGIN_ILIM_500_MA;
 	}
 
 	return max77818_i2c_reg_write8(dev,
@@ -388,7 +393,7 @@ int max77818_set_usbc_input_current_limit(struct udevice *dev)
 	return max77818_i2c_reg_write8(dev,
 				       MAX77818_REG_CHG_CNFG_10,
 				       MAX77818_CHG_CNFG_10__WCIN_ILIM__MASK,
-				       MAX77818_CHG_CNFG_10__WCIN_ILIM__1P26_A);
+				       MAX77818_CHG_CNFG_10__WCIN_ILIM_500_MA);
 }
 
 int max77818_set_minimal_charger_config(void)
@@ -409,13 +414,13 @@ int max77818_set_minimal_charger_config(void)
 		printf("%s Failed to set fast charger current\n",
 		       __func__);
 
-	printf("Trying to set pogo input current limit: 1.5A\n");
-	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_1P5_A);
+	printf("Trying to set pogo input current limit: 500 mA\n");
+	ret = max77818_set_pogo_input_current_limit(NULL, ILIM_500_MA);
 	if (ret != 0)
 		printf("%s: Failed to set pogo input current limit\n",
 		       __func__);
 
-	printf("Trying to set USB-C input current limit: 1.2A\n");
+	printf("Trying to set USB-C input current limit: 500 mA\n");
 	ret = max77818_set_usbc_input_current_limit(NULL);
 	if (ret != 0)
 		printf("%s: Failed to set USB-C input current limit\n",
@@ -815,8 +820,8 @@ static int zs_do_set_usbc_input_current_limit(cmd_tbl_t *cmdtp,
 }
 U_BOOT_CMD(
 	max77818_set_usbc_input_current_limit, 1, 1, zs_do_set_usbc_input_current_limit,
-	"Set max USB-C input current (1.3A)",
-	"Set max charge input current limit to 1260 (1.3A) for the USB-C charge input"
+	"Set max USB-C input current (500 mA)",
+	"Set max charge input current limit to 500 mA for the USB-C charge input"
 );
 
 static int read_gpio(unsigned gpio)

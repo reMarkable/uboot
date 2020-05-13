@@ -9,6 +9,7 @@ enum fast_charge_current {
 };
 
 enum pogo_ilim {
+	ILIM_500_MA,
 	ILIM_1P5_A,
 	ILIM_2P8_A
 };
