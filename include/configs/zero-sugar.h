@@ -90,7 +90,7 @@
 #define CONFIG_FASTBOOT_USB_DEV 0
 
 #define CONFIG_MFG_ENV_SETTINGS \
-	"mfgtool_args=setenv bootargs console=${console},${baudrate} quiet panic=20 systemd.crash_reboot rootwait rw root=/dev/mmcblk2p2\0" \
+	"mfgtool_args=setenv bootargs console=${console},${baudrate} rootwait rw root=/dev/mmcblk2p2\0" \
 	"bootcmd_mfg=" \
 	"run mfgtool_args;" \
 	"setenv loadaddr 0x82000000;" \
@@ -126,7 +126,8 @@
 	"bootlimit=1\0 " \
 	"mmcautodetect=yes\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/mmcblk2p${active_partition} rootwait rootfstype=ext4 rw\0" \
+		"root=/dev/mmcblk2p${active_partition} rootwait rootfstype=ext4 rw " \
+		"quiet panic=20 systemd.crash_reboot\0" \
 	"loadimage=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
