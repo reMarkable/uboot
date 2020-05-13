@@ -12,6 +12,8 @@
 #include <fat.h>
 #include <memalign.h>
 
+#define TEMP_CRITICAL_HIGH 50
+
 static int epd_splash(void);
 static int splash_init(void);
 static uint8_t *epd_load_image(const char *filename, u32 *x0, u32 *y0, u32 *width, u32 *height);
@@ -212,6 +214,11 @@ int epd_display_init()
 		printf("%s: failed to read temperature, defaulting to %d\n", __func__, temp);
 	} else {
 		printf("%s: temperature = %d\n", __func__, temp);
+
+		if (temp >= TEMP_CRITICAL_HIGH) {
+			printf("EPD temperature critically high, turning off\n");
+			do_poweroff(NULL, 0, 0, NULL);
+		}
 	}
 	splash.set_temp(temp);
 
