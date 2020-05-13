@@ -90,7 +90,7 @@
 #define CONFIG_FASTBOOT_USB_DEV 0
 
 #define CONFIG_MFG_ENV_SETTINGS \
-	"mfgtool_args=setenv bootargs console=${console},${baudrate} rootwait rw root=/dev/mmcblk2p2\0" \
+	"mfgtool_args=setenv bootargs console=${console},${baudrate} quiet panic=20 systemd.crash_reboot rootwait rw root=/dev/mmcblk2p2\0" \
 	"bootcmd_mfg=" \
 	"run mfgtool_args;" \
 	"setenv loadaddr 0x82000000;" \
