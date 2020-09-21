@@ -266,7 +266,7 @@ U_BOOT_CMD(
 		""
 		);
 
-int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int epd_set_power(bool enabled)
 {
 	struct udevice *bus, *dev;
 	u8 mask, val;
@@ -316,9 +316,14 @@ int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 
 	/* Power on, include VCOM in power sequence */
 	mask = (SY7636A_OPERATIONMODE_ONOFF | SY7636A_OPERATIONMODE_VCOMCTRL);
-	val = SY7636A_OPERATIONMODE_ONOFF;
+	val = enabled ? SY7636A_OPERATIONMODE_ONOFF : 0;
 
 	return sy7636a_i2c_reg_write(dev, SY7636A_REG_OPERATIONMODE, mask, val);
+}
+
+static int zs_do_epd_power_on(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return epd_set_power(true);
 }
 
 U_BOOT_CMD(

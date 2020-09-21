@@ -65,14 +65,15 @@ static void power_perfs(void)
 
 	/* EPD */
 	zs_do_config_epd_powerctrl_pins();
-	zs_do_epd_power_on(NULL, 0, 0, NULL);
+	epd_set_power(true);
 	udelay(10000);
 
 	/* enable display and run init sequence */
 	epd_display_init();
 
-	// Shutdown LCDIF
+	// Shutdown LCDIF & EPD
 	lcdif_power_down();
+	epd_set_power(false);
 
 	/* DIGITIZER */
 	zs_do_config_digitizer_powerctrl_pins();
