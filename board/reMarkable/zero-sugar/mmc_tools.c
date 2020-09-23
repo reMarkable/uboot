@@ -1,3 +1,11 @@
+/*
+ * (C) Copyright 2020
+ * reMarkable AS - http://www.remarkable.com
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ * Author: Lars Ivar Miljeteig <lars.ivar.miljeteig@remarkable.com>
+ */
+
 #include "mmc_tools.h"
 
 #include <asm/arch/sys_proto.h>

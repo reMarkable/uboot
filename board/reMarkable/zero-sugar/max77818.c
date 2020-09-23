@@ -1,3 +1,11 @@
+/*
+ * (C) Copyright 2020
+ * reMarkable AS - http://www.remarkable.com
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ * Author: Steinar Bakkemo <steinar.bakkemo@remarkable.com>
+ */
+
 #include "max77818.h"
 
 #include <linux/errno.h>

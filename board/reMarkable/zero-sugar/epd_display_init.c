@@ -1,3 +1,11 @@
+/*
+ * (C) Copyright 2020
+ * reMarkable AS - http://www.remarkable.com
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ * Author: Thomas Ingebretsen <thomas.ingebretsen@remarkable.com>
+ */
+
 #include "epd_display_init.h"
 #include "epd_pmic_init.h"
 #include "mmc_tools.h"

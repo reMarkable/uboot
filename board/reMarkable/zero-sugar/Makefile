@@ -1,4 +1,4 @@
-# (C) Copyright 2015 Freescale Semiconductor, Inc.
+# (C) Copyright 2019 reMarkable AS
 #
 # SPDX-License-Identifier:	GPL-2.0+
 #

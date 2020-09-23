@@ -1,3 +1,11 @@
+/*
+ * (C) Copyright 2020
+ * reMarkable AS - http://www.remarkable.com
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ * Author: Steinar Bakkemo <steinar.bakkemo@remarkable.com>
+ */
+
 #include "serial_download_trap.h"
 
 #include <asm/arch/mx7-pins.h>
